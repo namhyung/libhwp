@@ -793,7 +793,7 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
             }
             _g_object_unref0 (input);
         } else if (g_str_equal(entry, "BodyText") ||
-                   g_str_equal(entry, "VeiwText")) {
+                   g_str_equal(entry, "ViewText")) {
             GsfInfile* infile;
 
             _g_array_free0 (file->section_streams);
