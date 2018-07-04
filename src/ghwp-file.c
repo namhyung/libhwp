@@ -114,7 +114,7 @@ GHWPFile *ghwp_file_new_from_filename (const gchar* filename, GError** error)
     g_return_val_if_fail (filename != NULL, NULL);
 
     /* check signature */
-	static const guint8 const signature_ole[] = {
+	static const guint8 signature_ole[] = {
         0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1
     };
 
