@@ -814,9 +814,9 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
             for (j = 0; j < num_children; j++) {
                 input = gsf_infile_child_by_index (infile, j);
                 GsfInfile *section = _g_object_ref0 (input);
-                num_children = gsf_infile_num_children (section);
+                gint num_section_children = gsf_infile_num_children (section);
 
-                if (num_children > 0) {
+                if (num_section_children > 0) {
                     fprintf (stderr, "invalid section\n");
                 }
 
