@@ -366,9 +366,6 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                         /* FIXME 중복 저장 */
                         g_array_append_val (page->paragraphs, paragraph);
                         y = 0.0;
-                    } else {
-                        /* FIXME 중복 저장 */
-                        g_array_append_val (page->paragraphs, paragraph);
                     }
                 }
                     break;
