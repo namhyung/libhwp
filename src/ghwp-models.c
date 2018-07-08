@@ -28,6 +28,7 @@
 #include <glib/gprintf.h>
 
 #include "ghwp-models.h"
+#include "ghwp-parse.h"
 
 #define _g_free0(var) (var = (g_free (var), NULL))
 
@@ -121,6 +122,24 @@ GHWPTable *ghwp_paragraph_get_table (GHWPParagraph *paragraph)
 {
     g_return_val_if_fail (paragraph != NULL, NULL);
     return paragraph->table;
+}
+
+void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
+                                  GHWPContext *ctx)
+{
+    context_read_uint32 (ctx, &paragraph->header.n_chars);
+    context_read_uint32 (ctx, &paragraph->header.control_mask);
+    context_read_uint16 (ctx, &paragraph->header.para_shape_id);
+    context_read_uint8  (ctx, &paragraph->header.para_style_id);
+    context_read_uint8  (ctx, &paragraph->header.col_split);
+    context_read_uint16 (ctx, &paragraph->header.n_char_shapes);
+    context_read_uint16 (ctx, &paragraph->header.n_range_tags);
+    context_read_uint16 (ctx, &paragraph->header.n_line_segs);
+    context_read_uint32 (ctx, &paragraph->header.para_id);
+
+    if (context_check_version(ctx, 5, 0, 3, 2)) {
+        context_read_uint16 (ctx, &paragraph->header.history_merge);
+    }
 }
 
 /** GHWPTable ****************************************************************/

@@ -29,7 +29,7 @@
 #define __GHWP_MODELS_H__
 
 #include <glib-object.h>
-#include "ghwp-parse.h"
+#include "ghwp.h"
 
 G_BEGIN_DECLS
 
@@ -46,14 +46,30 @@ typedef struct _GHWPTableCell GHWPTableCell;
 #define GHWP_IS_PARAGRAPH_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GHWP_TYPE_PARAGRAPH))
 #define GHWP_PARAGRAPH_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GHWP_TYPE_PARAGRAPH, GHWPParagraphClass))
 
-typedef struct _GHWPParagraph      GHWPParagraph;
-typedef struct _GHWPParagraphClass GHWPParagraphClass;
+typedef struct _GHWPParagraph       GHWPParagraph;
+typedef struct _GHWPParagraphClass  GHWPParagraphClass;
+typedef struct _GHWPParagraphHeader GHWPParagraphHeader;
+
+struct _GHWPParagraphHeader {
+    guint32    n_chars;
+    guint32    control_mask;
+    guint16    para_shape_id;
+    guint8     para_style_id;
+    guint8     col_split;
+    guint16    n_char_shapes;
+    guint16    n_range_tags;
+    guint16    n_line_segs;
+    guint32    para_id;
+    guint16    history_merge;  /* 변경추적 병합 문단여부 (5.0.3.2 버전 이상) */
+};
 
 struct _GHWPParagraph
 {
-    GObject    parent_instance;
-    GHWPText  *ghwp_text;
-    GHWPTable *table;
+    GObject              parent_instance;
+    GHWPParagraphHeader  header;
+
+    GHWPText            *ghwp_text;
+    GHWPTable           *table;
 };
 
 struct _GHWPParagraphClass
@@ -61,14 +77,16 @@ struct _GHWPParagraphClass
     GObjectClass parent_class;
 };
 
-GType          ghwp_paragraph_get_type      (void) G_GNUC_CONST;
-GHWPParagraph *ghwp_paragraph_new           (void);
-void           ghwp_paragraph_set_ghwp_text (GHWPParagraph *paragraph,
-                                             GHWPText      *ghwp_text);
-GHWPText      *ghwp_paragraph_get_ghwp_text (GHWPParagraph *paragraph);
-GHWPTable     *ghwp_paragraph_get_table     (GHWPParagraph *paragraph);
-void           ghwp_paragraph_set_table     (GHWPParagraph *paragraph,
-                                             GHWPTable     *table);
+GType          ghwp_paragraph_get_type          (void) G_GNUC_CONST;
+GHWPParagraph *ghwp_paragraph_new               (void);
+void           ghwp_paragraph_set_ghwp_text     (GHWPParagraph *paragraph,
+                                                 GHWPText      *ghwp_text);
+GHWPText      *ghwp_paragraph_get_ghwp_text     (GHWPParagraph *paragraph);
+GHWPTable     *ghwp_paragraph_get_table         (GHWPParagraph *paragraph);
+void           ghwp_paragraph_set_table         (GHWPParagraph *paragraph,
+                                                 GHWPTable     *table);
+void           ghwp_parse_paragraph_header      (GHWPParagraph *paragraph,
+                                                 GHWPContext *ctx);
 
 /** GHWPText *****************************************************************/
 

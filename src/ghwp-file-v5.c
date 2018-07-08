@@ -225,6 +225,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         GInputStream  *section_stream;
         GHWPContext   *context;
         GHWPSection   *section;
+        GHWPParagraph *paragraph;
 
         section_stream = g_array_index (file->section_streams,
                                         GInputStream *,
@@ -250,24 +251,26 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
             switch (context->tag_id) {
             case GHWP_TAG_PARA_HEADER:
                 if (context->status != STATE_INSIDE_TABLE) {
-                    GHWPParagraph *paragraph = ghwp_paragraph_new ();
+                    paragraph = ghwp_paragraph_new ();
+                    ghwp_parse_paragraph_header (paragraph, context);
                     g_array_append_val (doc->paragraphs, paragraph);
                 } else if (context->status == STATE_INSIDE_TABLE) {
-                    GHWPParagraph *paragraph;
                     GHWPTable     *table;
                     GHWPTableCell *cell;
+
                     paragraph = g_array_index (doc->paragraphs,
                                                GHWPParagraph *,
                                                doc->paragraphs->len - 1);
                     table = ghwp_paragraph_get_table (paragraph);
                     cell  = ghwp_table_get_last_cell (table);
+
                     GHWPParagraph *c_paragraph = ghwp_paragraph_new ();
+                    ghwp_parse_paragraph_header (c_paragraph, context);
                     ghwp_table_cell_add_paragraph (cell, c_paragraph);
                 }
                 break;
             case GHWP_TAG_PARA_TEXT:
             {
-                GHWPParagraph *paragraph;
                 GHWPText      *ghwp_text;
                 paragraph    = g_array_index (doc->paragraphs, GHWPParagraph *,
                                               doc->paragraphs->len - 1);
@@ -290,7 +293,6 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     } else {
                         g_array_append_val (page->paragraphs, paragraph);
                     } /* if */
-                    paragraph = NULL;
                 } else if (context->status == STATE_INSIDE_TABLE) {
                     GHWPTable     *table;
                     GHWPTableCell *cell;
