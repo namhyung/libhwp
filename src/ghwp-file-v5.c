@@ -239,6 +239,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
         section = ghwp_section_new ();
         g_array_append_val (doc->sections, section);
+        ghwp_page_set_section(page, section);
 
         while (ghwp_context_pull(context, error)) {
             curr_lv = (guint) context->level;
@@ -283,6 +284,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     if (y > 842.0 - 80.0) {
                         g_array_append_val (doc->pages, page);
                         page = ghwp_page_new ();
+                        ghwp_page_set_section(page, section);
                         g_array_append_val (page->paragraphs, paragraph);
                         y = 0.0;
                     } else {
@@ -381,6 +383,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     if (y > 842.0 - 80.0) {
                         g_array_append_val (doc->pages, page);
                         page = ghwp_page_new ();
+                        ghwp_page_set_section(page, section);
                         /* FIXME 중복 저장 */
                         g_array_append_val (page->paragraphs, paragraph);
                         y = 0.0;

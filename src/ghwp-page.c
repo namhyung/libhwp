@@ -29,8 +29,17 @@ void ghwp_page_get_size (GHWPPage *page,
                          gdouble  *height)
 {
     g_return_if_fail (page != NULL);
-    *width  = 595.0;
-    *height = 842.0;
+
+    *width  = page->section->page_info.h_size / GHWP_PPU;
+    *height = page->section->page_info.v_size / GHWP_PPU;
+}
+
+void ghwp_page_set_section(GHWPPage    *page,
+                           GHWPSection *sec)
+{
+    g_return_if_fail (page != NULL);
+
+    page->section = sec;
 }
 
 #include <cairo-ft.h>

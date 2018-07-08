@@ -38,8 +38,9 @@ typedef struct _GHWPPageClass   GHWPPageClass;
 
 struct _GHWPPage
 {
-    GObject  parent_instance;
-    GArray  *paragraphs;
+    GObject       parent_instance;
+    GArray       *paragraphs;
+    GHWPSection  *section;
 };
 
 struct _GHWPPageClass
@@ -52,6 +53,9 @@ GHWPPage *ghwp_page_new        (void);
 void      ghwp_page_get_size   (GHWPPage *page,
                                 gdouble  *width,
                                 gdouble  *height);
+void      ghwp_page_set_section(GHWPPage    *page,
+                                GHWPSection *sec);
+
 gboolean  ghwp_page_render     (GHWPPage *page, cairo_t *cr);
 /* experimental */
 void
