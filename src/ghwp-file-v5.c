@@ -42,6 +42,7 @@
 
 #include "gsf-input-stream.h"
 #include "ghwp-file-v5.h"
+#include "ghwp-parse.h"
 #include "config.h"
 
 G_DEFINE_TYPE (GHWPFileV5, ghwp_file_v5, GHWP_TYPE_FILE);
@@ -201,7 +202,8 @@ static gchar *_ghwp_file_get_text_from_context (GHWPContext *context)
 /* enum의 최대값은 ?? */
 typedef enum
 {
-    CTRL_ID_TABLE = GUINT32_FROM_LE(MAKE_CTRL_ID('t', 'b', 'l', ' '))
+    CTRL_ID_TABLE		= GUINT32_FROM_LE(MAKE_CTRL_ID('t', 'b', 'l', ' ')),
+    CTRL_ID_SEC_DEF		= GUINT32_FROM_LE(MAKE_CTRL_ID('s', 'e', 'c', 'd')),
 } CtrlID;
 
 /* TODO fsm parser, nautilus에서 파일 속성만 보는 경우가 있으므로 속도 문제
@@ -219,8 +221,10 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
     GHWPPage  *page = ghwp_page_new ();
 
     for (index = 0; index < file->section_streams->len; index++) {
-        GInputStream *section_stream;
-        GHWPContext  *context;
+        GInputStream  *section_stream;
+        GHWPContext   *context;
+        GHWPSection   *section;
+
         section_stream = g_array_index (file->section_streams,
                                         GInputStream *,
                                         index);
@@ -231,6 +235,9 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         context->version[1] = file->minor_version;
         context->version[2] = file->micro_version;
         context->version[3] = file->extra_version;
+
+        section = ghwp_section_new ();
+        g_array_append_val (doc->sections, section);
 
         while (ghwp_context_pull(context, error)) {
             curr_lv = (guint) context->level;
@@ -298,6 +305,9 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 switch (ctrl_id) {
                 case CTRL_ID_TABLE:
                     context->status = STATE_INSIDE_TABLE;
+                    break;
+                case CTRL_ID_SEC_DEF:
+                    ghwp_parse_section_def (section, context);
                     break;
                 default:
                     context->status = STATE_NORMAL;
@@ -376,6 +386,9 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 default:
                     break;
                 }
+                break;
+            case GHWP_TAG_PAGE_DEF:
+                ghwp_parse_page_def (section, context);
                 break;
             default:
 /*                printf ("%s:%d: %s not implemented\n", __FILE__, __LINE__,*/

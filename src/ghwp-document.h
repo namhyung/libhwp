@@ -46,6 +46,7 @@ struct _GHWPDocument {
     gchar               *prv_text;
     GArray              *paragraphs;
     GArray              *pages;
+    GArray              *sections;
     GsfDocMetaData      *summary_info;
     /* ev info */
     const gchar         *title;

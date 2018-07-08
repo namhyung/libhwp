@@ -42,7 +42,7 @@ G_BEGIN_DECLS
 typedef enum
 {
     STATE_NORMAL,
-    STATE_INSIDE_TABLE
+    STATE_INSIDE_TABLE,
 } GHWPParseState;
 
 typedef struct _GHWPContext        GHWPContext;

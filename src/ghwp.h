@@ -152,6 +152,7 @@ typedef struct _GHWPFileV3    GHWPFileV3;
 typedef struct _GHWPPage      GHWPPage;
 typedef struct _GHWPRectangle GHWPRectangle;
 typedef struct _GHWPContext   GHWPContext;
+typedef struct _GHWPSection   GHWPSection;
 
 G_END_DECLS
 
@@ -161,6 +162,7 @@ G_END_DECLS
 #include "ghwp-file.h"
 #include "ghwp-models.h"
 #include "ghwp-page.h"
+#include "ghwp-section.h"
 #include "ghwp-version.h"
 #include "gsf-input-stream.h"
 

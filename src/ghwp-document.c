@@ -127,6 +127,7 @@ static void ghwp_document_init (GHWPDocument *doc)
 {
     doc->paragraphs = g_array_new (TRUE, TRUE, sizeof (GHWPParagraph *));
     doc->pages      = g_array_new (TRUE, TRUE, sizeof (GHWPPage *));
+    doc->sections   = g_array_new (TRUE, TRUE, sizeof (GHWPSection *));
 }
 
 static void ghwp_document_finalize (GObject *obj)
@@ -136,6 +137,7 @@ static void ghwp_document_finalize (GObject *obj)
     _g_free0 (doc->prv_text);
     _g_array_free0 (doc->paragraphs);
     _g_array_free0 (doc->pages);
+    _g_array_free0 (doc->sections);
     _g_object_unref0 (doc->summary_info);
     G_OBJECT_CLASS (ghwp_document_parent_class)->finalize (obj);
 }

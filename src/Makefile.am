@@ -11,6 +11,7 @@ INST_H_FILES =             \
 	ghwp-models.h      \
 	ghwp-page.h        \
 	ghwp-parse.h       \
+	ghwp-section.h     \
 	ghwp-version.h     \
 	gsf-input-stream.h \
 	ghwp-file-v3.h     \
@@ -29,6 +30,7 @@ libghwp_la_SOURCES =       \
 	ghwp-models.c      \
 	ghwp-page.c        \
 	ghwp-parse.c       \
+	ghwp-section.c     \
 	gsf-input-stream.c \
 	ghwp-file-v3.c     \
 	ghwp-file-v5.c     \
