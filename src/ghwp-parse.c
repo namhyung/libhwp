@@ -58,6 +58,88 @@ gboolean context_skip (GHWPContext *context, guint16 count)
     return TRUE;
 }
 
+gboolean context_read_int8 (GHWPContext *context, gint8 *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 1, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 1,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 1))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    context->data_count += 1;
+    return TRUE;
+}
+
+gboolean context_read_int16 (GHWPContext *context, gint16 *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 2, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 2,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 2))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    *i = GINT16_FROM_LE(*i);
+    context->data_count += 2;
+    return TRUE;
+}
+
+gboolean context_read_int32 (GHWPContext *context, gint32 *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 4, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 4,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 4))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    *i = GINT32_FROM_LE(*i);
+    context->data_count += 4;
+    return TRUE;
+}
+
+gboolean context_read_uint8 (GHWPContext *context, guint8 *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 1, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 1,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 1))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    context->data_count += 1;
+    return TRUE;
+}
+
 gboolean context_read_uint16 (GHWPContext *context, guint16 *i)
 {
     g_return_val_if_fail (context != NULL, FALSE);
@@ -68,8 +150,7 @@ gboolean context_read_uint16 (GHWPContext *context, guint16 *i)
                                           &context->priv->bytes_read,
                                           NULL, NULL);
     if ((is_success == FALSE) ||
-        (context->priv->bytes_read != 2) ||
-        (context->priv->bytes_read == 0))
+        (context->priv->bytes_read != 2))
     {
         *i = 0;
         g_input_stream_close (context->stream, NULL, NULL);
@@ -90,8 +171,49 @@ gboolean context_read_uint32 (GHWPContext *context, guint32 *i)
                                           &context->priv->bytes_read,
                                           NULL, NULL);
     if ((is_success == FALSE) ||
-        (context->priv->bytes_read != 4) ||
-        (context->priv->bytes_read == 0))
+        (context->priv->bytes_read != 4))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    *i = GUINT32_FROM_LE(*i);
+    context->data_count += 4;
+    return TRUE;
+}
+
+gboolean context_read_hwp_unit16 (GHWPContext *context, ghwp_unit16 *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 2, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 2,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 2))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    *i = GUINT16_FROM_LE(*i);
+    context->data_count += 2;
+    return TRUE;
+}
+
+gboolean context_read_hwp_unit (GHWPContext *context, ghwp_unit *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 4, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 4,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 4))
     {
         *i = 0;
         g_input_stream_close (context->stream, NULL, NULL);

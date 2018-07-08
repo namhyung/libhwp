@@ -28,6 +28,12 @@
 
 G_BEGIN_DECLS
 
+#define GHWP_UPI  7200   /* units  per inch */
+#define GHWP_PPU  100.0  /* pixels per unit */
+
+typedef guint32  ghwp_unit;
+typedef guint16  ghwp_unit16;
+
 GQuark ghwp_error_quark (void);
 
 #define GHWP_ERROR ghwp_error_quark ()

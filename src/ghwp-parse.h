@@ -23,6 +23,8 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
+#include "ghwp.h"
+
 G_BEGIN_DECLS
 
 #define GHWP_TYPE_CONTEXT             (ghwp_context_get_type ())
@@ -68,15 +70,28 @@ struct _GHWPContextPrivate {
     gboolean          ret;
 };
 
-GType        ghwp_context_get_type (void) G_GNUC_CONST;
-GHWPContext *ghwp_context_new      (GInputStream *stream);
-gboolean     ghwp_context_pull     (GHWPContext  *context, GError **error);
-gboolean     context_read_uint16   (GHWPContext  *context,
-                                    guint16      *i);
-gboolean     context_read_uint32   (GHWPContext  *context,
-                                    guint32      *i);
-gboolean     context_skip          (GHWPContext  *context,
-                                    guint16       count);
+GType        ghwp_context_get_type   (void) G_GNUC_CONST;
+GHWPContext *ghwp_context_new        (GInputStream *stream);
+gboolean     ghwp_context_pull       (GHWPContext  *context,
+				      GError **error);
+gboolean     context_read_int8       (GHWPContext  *context,
+                                      gint8        *i);
+gboolean     context_read_int16      (GHWPContext  *context,
+                                      gint16       *i);
+gboolean     context_read_int32      (GHWPContext  *context,
+                                      gint32       *i);
+gboolean     context_read_uint8      (GHWPContext  *context,
+                                      guint8       *i);
+gboolean     context_read_uint16     (GHWPContext  *context,
+                                      guint16      *i);
+gboolean     context_read_uint32     (GHWPContext  *context,
+                                      guint32      *i);
+gboolean     context_read_hwp_unit   (GHWPContext  *context,
+                                      ghwp_unit    *i);
+gboolean     context_read_hwp_unit16 (GHWPContext  *context,
+                                      ghwp_unit16  *i);
+gboolean     context_skip            (GHWPContext  *context,
+                                      guint16       count);
 
 G_END_DECLS
 
