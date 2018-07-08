@@ -48,13 +48,15 @@ struct _GHWPPageClass
     GObjectClass parent_class;
 };
 
-GType     ghwp_page_get_type   (void) G_GNUC_CONST;
-GHWPPage *ghwp_page_new        (void);
-void      ghwp_page_get_size   (GHWPPage *page,
-                                gdouble  *width,
-                                gdouble  *height);
-void      ghwp_page_set_section(GHWPPage    *page,
-                                GHWPSection *sec);
+GType     ghwp_page_get_type      (void) G_GNUC_CONST;
+GHWPPage *ghwp_page_new           (void);
+void      ghwp_page_get_size      (GHWPPage *page,
+                                   gdouble  *width,
+                                   gdouble  *height);
+void      ghwp_page_set_section   (GHWPPage    *page,
+                                   GHWPSection *sec);
+void      ghwp_page_add_paragraph (GHWPPage      *page,
+                                   GHWPParagraph *para);
 
 gboolean  ghwp_page_render     (GHWPPage *page, cairo_t *cr);
 /* experimental */

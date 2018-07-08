@@ -217,15 +217,13 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
     guint16 curr_lv = 0;
     guint   index;
     GHWPFileV5 *file = GHWP_FILE_V5(doc->file);
-    gdouble    y    = 0.0;
-    guint      len  = 0;
-    GHWPPage  *page = ghwp_page_new ();
+    GHWPPage   *page = NULL;
 
     for (index = 0; index < file->section_streams->len; index++) {
         GInputStream  *section_stream;
         GHWPContext   *context;
         GHWPSection   *section;
-        GHWPParagraph *paragraph;
+        GHWPParagraph *paragraph = NULL;
         GHWPParagraph *c_paragraph;
         GHWPTable     *table = NULL;
         GHWPTableCell *cell = NULL;
@@ -245,7 +243,6 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
         section = ghwp_section_new ();
         g_array_append_val (doc->sections, section);
-        ghwp_page_set_section(page, section);
 
         while (ghwp_context_pull(context, error)) {
             curr_lv = (guint) context->level;
@@ -276,29 +273,16 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                                            page->paragraphs->len - 1);
                 text      = _ghwp_file_get_text_from_context (context);
                 ghwp_text = ghwp_text_new (text);
-                g_free (text);
 
                 if (context->status != STATE_INSIDE_TABLE) {
                     ghwp_paragraph_set_ghwp_text (paragraph, ghwp_text);
-                    /* 높이 계산 */
-                    len = g_utf8_strlen (ghwp_text->text, -1);
-                    y += 18.0 * ceil (len / 33.0);
-
-                    if (y > 842.0 - 80.0) {
-                        g_array_append_val (doc->pages, page);
-                        page = ghwp_page_new ();
-                        ghwp_page_set_section(page, section);
-                        g_array_append_val (page->paragraphs, paragraph);
-                        y = 0.0;
-                    } else {
-                        g_array_append_val (page->paragraphs, paragraph);
-                    } /* if */
                 } else if (context->status == STATE_INSIDE_TABLE) {
                     table       = ghwp_paragraph_get_table (paragraph);
                     cell        = ghwp_table_get_last_cell (table);
                     c_paragraph = ghwp_table_cell_get_last_paragraph (cell);
                     ghwp_paragraph_set_ghwp_text (c_paragraph, ghwp_text);
                 }
+                g_free (text);
                 break;
             case GHWP_TAG_PARA_CHAR_SHAPE:
                 paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
@@ -322,6 +306,23 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     cell        = ghwp_table_get_last_cell (table);
                     c_paragraph = ghwp_table_cell_get_last_paragraph (cell);
                     ghwp_parse_paragraph_line_seg (c_paragraph, context);
+                }
+
+                if (context->level == 1) {
+                    gint i;
+                    for (i = 0; i < paragraph->header.n_line_segs; i++) {
+                        GHWPLineSeg *line;
+
+                        line = g_array_index (paragraph->line_segs, GHWPLineSeg *, i);
+                        if (line->v_pos != 0)
+                            continue;
+
+                        page = ghwp_page_new ();
+                        /* FIXME 중복 제거 */
+                        ghwp_page_add_paragraph (page, paragraph);
+                        ghwp_page_set_section (page, section);
+                        g_array_append_val (doc->pages, page);
+                    }
                 }
                 break;
             case GHWP_TAG_PARA_RANGE_TAG:
@@ -393,22 +394,12 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 switch (context->status) {
                 /* table에 cell을 추가한다 */
                 case STATE_INSIDE_TABLE:
+                    paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
+                                               page->paragraphs->len - 1);
+                    table = ghwp_paragraph_get_table (paragraph);
                     cell  = ghwp_table_cell_new_from_context(context);
-                    if (GHWP_IS_TABLE(table)) {
-                        ghwp_table_add_cell (table, cell);
-                        /* TODO 높이 계산 cell_spacing 고려할 것 FIXME 소수점 */
-                        y += cell->height / 7200.0 * 25.4 *
-                                cell->col_span / table->n_cols;
-                    }
-
-                    if (y > 842.0 - 80.0) {
-                        g_array_append_val (doc->pages, page);
-                        page = ghwp_page_new ();
-                        ghwp_page_set_section(page, section);
-                        /* FIXME 중복 저장 */
-                        g_array_append_val (page->paragraphs, paragraph);
-                        y = 0.0;
-                    }
+                    /* FIXME 테이블 내에서 페이지가 나누어지는 경우 처리 */
+                    ghwp_table_add_cell (table, cell);
                     break;
                 default:
                     break;

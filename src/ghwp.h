@@ -153,6 +153,7 @@ typedef struct _GHWPPage      GHWPPage;
 typedef struct _GHWPRectangle GHWPRectangle;
 typedef struct _GHWPContext   GHWPContext;
 typedef struct _GHWPSection   GHWPSection;
+typedef struct _GHWPParagraph GHWPParagraph;
 
 G_END_DECLS
 

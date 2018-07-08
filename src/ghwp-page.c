@@ -42,6 +42,14 @@ void ghwp_page_set_section(GHWPPage    *page,
     page->section = sec;
 }
 
+void ghwp_page_add_paragraph(GHWPPage      *page,
+                             GHWPParagraph *para)
+{
+    g_return_if_fail (page != NULL);
+
+    g_array_append_val (page->paragraphs, para);
+}
+
 #include <cairo-ft.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
