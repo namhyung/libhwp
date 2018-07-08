@@ -304,6 +304,42 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 }
             }
                 break;
+            case GHWP_TAG_PARA_CHAR_SHAPE:
+                paragraph = g_array_index (section->paragraphs, GHWPParagraph *,
+                                           section->paragraphs->len - 1);
+                if (context->status != STATE_INSIDE_TABLE) {
+                    ghwp_parse_paragraph_char_shape (paragraph, context);
+                } else if (context->status == STATE_INSIDE_TABLE) {
+                    table       = ghwp_paragraph_get_table (paragraph);
+                    cell        = ghwp_table_get_last_cell (table);
+                    c_paragraph = ghwp_table_cell_get_last_paragraph (cell);
+                    ghwp_parse_paragraph_char_shape (c_paragraph, context);
+                }
+                break;
+            case GHWP_TAG_PARA_LINE_SEG:
+                paragraph = g_array_index (section->paragraphs, GHWPParagraph *,
+                                           section->paragraphs->len - 1);
+                if (context->status != STATE_INSIDE_TABLE) {
+                    ghwp_parse_paragraph_line_seg (paragraph, context);
+                } else if (context->status == STATE_INSIDE_TABLE) {
+                    table       = ghwp_paragraph_get_table (paragraph);
+                    cell        = ghwp_table_get_last_cell (table);
+                    c_paragraph = ghwp_table_cell_get_last_paragraph (cell);
+                    ghwp_parse_paragraph_line_seg (c_paragraph, context);
+                }
+                break;
+            case GHWP_TAG_PARA_RANGE_TAG:
+                paragraph = g_array_index (section->paragraphs, GHWPParagraph *,
+                                           section->paragraphs->len - 1);
+                if (context->status != STATE_INSIDE_TABLE) {
+                    ghwp_parse_paragraph_range_tag (paragraph, context);
+                } else if (context->status == STATE_INSIDE_TABLE) {
+                    table       = ghwp_paragraph_get_table (paragraph);
+                    cell        = ghwp_table_get_last_cell (table);
+                    c_paragraph = ghwp_table_cell_get_last_paragraph (cell);
+                    ghwp_parse_paragraph_range_tag (c_paragraph, context);
+                }
+                break;
             case GHWP_TAG_CTRL_HEADER:
                 context_read_uint32 (context, &ctrl_id);
                 ctrl_lv = context->level;

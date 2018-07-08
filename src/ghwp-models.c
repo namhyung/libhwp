@@ -84,6 +84,10 @@ GHWPParagraph *ghwp_paragraph_new (void)
 
 static void ghwp_paragraph_finalize (GObject *obj)
 {
+    GHWPParagraph *paragraph = GHWP_PARAGRAPH (obj);
+    g_array_free (paragraph->char_shapes, TRUE);
+    g_array_free (paragraph->range_tags, TRUE);
+    g_array_free (paragraph->line_segs, TRUE);
     G_OBJECT_CLASS (ghwp_paragraph_parent_class)->finalize (obj);
 }
 
@@ -95,6 +99,9 @@ static void ghwp_paragraph_class_init (GHWPParagraphClass *klass)
 
 static void ghwp_paragraph_init (GHWPParagraph *paragraph)
 {
+    paragraph->char_shapes = g_array_new (TRUE, TRUE, sizeof (GHWPCharShapeRef *));
+    paragraph->range_tags  = g_array_new (TRUE, TRUE, sizeof (GHWPRangeTag *));
+    paragraph->line_segs   = g_array_new (TRUE, TRUE, sizeof (GHWPLineSeg *));
 }
 
 void
@@ -127,6 +134,8 @@ GHWPTable *ghwp_paragraph_get_table (GHWPParagraph *paragraph)
 void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
                                   GHWPContext *ctx)
 {
+    g_return_if_fail (paragraph != NULL);
+
     context_read_uint32 (ctx, &paragraph->header.n_chars);
     context_read_uint32 (ctx, &paragraph->header.control_mask);
     context_read_uint16 (ctx, &paragraph->header.para_shape_id);
@@ -139,6 +148,65 @@ void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
 
     if (context_check_version(ctx, 5, 0, 3, 2)) {
         context_read_uint16 (ctx, &paragraph->header.history_merge);
+    }
+}
+
+void ghwp_parse_paragraph_char_shape (GHWPParagraph *paragraph,
+                                      GHWPContext *ctx)
+{
+    guint i;
+
+    g_return_if_fail (paragraph != NULL);
+
+    for (i = 0; i < paragraph->header.n_char_shapes; i++) {
+        GHWPCharShapeRef *char_shape = malloc (sizeof (*char_shape));
+
+        context_read_uint32 (ctx, &char_shape->pos);
+        context_read_uint32 (ctx, &char_shape->id);
+
+        g_array_append_val (paragraph->char_shapes, char_shape);
+    }
+}
+
+void ghwp_parse_paragraph_line_seg (GHWPParagraph *paragraph,
+                                    GHWPContext *ctx)
+{
+    guint i;
+
+    g_return_if_fail (paragraph != NULL);
+
+    for (i = 0; i < paragraph->header.n_line_segs; i++) {
+        GHWPLineSeg *line_seg = malloc (sizeof (*line_seg));
+
+        context_read_uint32 (ctx, &line_seg->text_start);
+        context_read_int32  (ctx, &line_seg->v_pos);
+        context_read_int32  (ctx, &line_seg->line_height);
+        context_read_int32  (ctx, &line_seg->text_height);
+        context_read_int32  (ctx, &line_seg->base_line);
+        context_read_int32  (ctx, &line_seg->line_spacing);
+        context_read_int32  (ctx, &line_seg->col_offset);
+        context_read_int32  (ctx, &line_seg->segment_width);
+        context_read_uint32 (ctx, &line_seg->tag);
+
+        g_array_append_val (paragraph->line_segs, line_seg);
+    }
+}
+
+void ghwp_parse_paragraph_range_tag (GHWPParagraph *paragraph,
+                                     GHWPContext *ctx)
+{
+    guint i;
+
+    g_return_if_fail (paragraph != NULL);
+
+    for (i = 0; i < paragraph->header.n_char_shapes; i++) {
+        GHWPRangeTag *range_tag = malloc (sizeof (*range_tag));
+
+        context_read_uint32 (ctx, &range_tag->start);
+        context_read_uint32 (ctx, &range_tag->end);
+        context_read_uint32 (ctx, &range_tag->tag);
+
+        g_array_append_val (paragraph->range_tags, range_tag);
     }
 }
 

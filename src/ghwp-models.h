@@ -49,6 +49,9 @@ typedef struct _GHWPTableCell GHWPTableCell;
 typedef struct _GHWPParagraph       GHWPParagraph;
 typedef struct _GHWPParagraphClass  GHWPParagraphClass;
 typedef struct _GHWPParagraphHeader GHWPParagraphHeader;
+typedef struct _GHWPCharShapeRef    GHWPCharShapeRef;
+typedef struct _GHWPLineSeg         GHWPLineSeg;
+typedef struct _GHWPRangeTag        GHWPRangeTag;
 
 struct _GHWPParagraphHeader {
     guint32    n_chars;
@@ -63,10 +66,49 @@ struct _GHWPParagraphHeader {
     guint16    history_merge;  /* 변경추적 병합 문단여부 (5.0.3.2 버전 이상) */
 };
 
+struct _GHWPCharShapeRef
+{
+    guint32  pos;
+    guint32  id;
+};
+
+#define LINESEG_TAG_PAGE_START    (1U << 0)
+#define LINESEG_TAG_COL_START     (1U << 1)
+#define LINESEG_TAG_EMPTY         (1U << 16)
+#define LINESEG_TAG_LINE_START    (1U << 17)
+#define LINESEG_TAG_LINE_END      (1U << 18)
+#define LINESEG_TAG_HYPHEN        (1U << 19)
+#define LINESEG_TAG_INDENT        (1U << 20)
+#define LINESEG_TAG_PARA_HEADING  (1U << 21)
+#define LINESEG_TAG_PROPERTY      (1U << 31)
+
+struct _GHWPLineSeg
+{
+    guint32  text_start;
+    gint32   v_pos;
+    gint32   line_height;
+    gint32   text_height;
+    gint32   base_line;
+    gint32   line_spacing;
+    gint32   col_offset;
+    gint32   segment_width;
+    guint32  tag;
+};
+
+struct _GHWPRangeTag
+{
+    guint32  start;
+    guint32  end;
+    guint32  tag;
+};
+
 struct _GHWPParagraph
 {
     GObject              parent_instance;
     GHWPParagraphHeader  header;
+    GArray              *char_shapes;
+    GArray              *range_tags;
+    GArray              *line_segs;
 
     GHWPText            *ghwp_text;
     GHWPTable           *table;
@@ -86,6 +128,12 @@ GHWPTable     *ghwp_paragraph_get_table         (GHWPParagraph *paragraph);
 void           ghwp_paragraph_set_table         (GHWPParagraph *paragraph,
                                                  GHWPTable     *table);
 void           ghwp_parse_paragraph_header      (GHWPParagraph *paragraph,
+                                                 GHWPContext *ctx);
+void           ghwp_parse_paragraph_char_shape  (GHWPParagraph *paragraph,
+                                                 GHWPContext *ctx);
+void           ghwp_parse_paragraph_line_seg    (GHWPParagraph *paragraph,
+                                                 GHWPContext *ctx);
+void           ghwp_parse_paragraph_range_tag   (GHWPParagraph *paragraph,
                                                  GHWPContext *ctx);
 
 /** GHWPText *****************************************************************/
