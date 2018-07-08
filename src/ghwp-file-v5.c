@@ -226,6 +226,11 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         GHWPContext   *context;
         GHWPSection   *section;
         GHWPParagraph *paragraph;
+        GHWPParagraph *c_paragraph;
+        GHWPTable     *table = NULL;
+        GHWPTableCell *cell = NULL;
+        GHWPText      *ghwp_text;
+        gchar         *text;
 
         section_stream = g_array_index (file->section_streams,
                                         GInputStream *,
@@ -253,29 +258,24 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 if (context->status != STATE_INSIDE_TABLE) {
                     paragraph = ghwp_paragraph_new ();
                     ghwp_parse_paragraph_header (paragraph, context);
-                    g_array_append_val (doc->paragraphs, paragraph);
+                    g_array_append_val (page->paragraphs, paragraph);
                 } else if (context->status == STATE_INSIDE_TABLE) {
-                    GHWPTable     *table;
-                    GHWPTableCell *cell;
-
-                    paragraph = g_array_index (doc->paragraphs,
+                    paragraph = g_array_index (page->paragraphs,
                                                GHWPParagraph *,
-                                               doc->paragraphs->len - 1);
+                                               page->paragraphs->len - 1);
                     table = ghwp_paragraph_get_table (paragraph);
                     cell  = ghwp_table_get_last_cell (table);
 
-                    GHWPParagraph *c_paragraph = ghwp_paragraph_new ();
+                    c_paragraph = ghwp_paragraph_new ();
                     ghwp_parse_paragraph_header (c_paragraph, context);
                     ghwp_table_cell_add_paragraph (cell, c_paragraph);
                 }
                 break;
             case GHWP_TAG_PARA_TEXT:
-            {
-                GHWPText      *ghwp_text;
-                paragraph    = g_array_index (doc->paragraphs, GHWPParagraph *,
-                                              doc->paragraphs->len - 1);
-                gchar *text  = _ghwp_file_get_text_from_context (context);
-                ghwp_text    = ghwp_text_new (text);
+                paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
+                                           page->paragraphs->len - 1);
+                text      = _ghwp_file_get_text_from_context (context);
+                ghwp_text = ghwp_text_new (text);
                 g_free (text);
 
                 if (context->status != STATE_INSIDE_TABLE) {
@@ -294,19 +294,15 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                         g_array_append_val (page->paragraphs, paragraph);
                     } /* if */
                 } else if (context->status == STATE_INSIDE_TABLE) {
-                    GHWPTable     *table;
-                    GHWPTableCell *cell;
-                    GHWPParagraph *c_paragraph;
                     table       = ghwp_paragraph_get_table (paragraph);
                     cell        = ghwp_table_get_last_cell (table);
                     c_paragraph = ghwp_table_cell_get_last_paragraph (cell);
                     ghwp_paragraph_set_ghwp_text (c_paragraph, ghwp_text);
                 }
-            }
                 break;
             case GHWP_TAG_PARA_CHAR_SHAPE:
-                paragraph = g_array_index (section->paragraphs, GHWPParagraph *,
-                                           section->paragraphs->len - 1);
+                paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
+                                           page->paragraphs->len - 1);
                 if (context->status != STATE_INSIDE_TABLE) {
                     ghwp_parse_paragraph_char_shape (paragraph, context);
                 } else if (context->status == STATE_INSIDE_TABLE) {
@@ -317,8 +313,8 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 }
                 break;
             case GHWP_TAG_PARA_LINE_SEG:
-                paragraph = g_array_index (section->paragraphs, GHWPParagraph *,
-                                           section->paragraphs->len - 1);
+                paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
+                                           page->paragraphs->len - 1);
                 if (context->status != STATE_INSIDE_TABLE) {
                     ghwp_parse_paragraph_line_seg (paragraph, context);
                 } else if (context->status == STATE_INSIDE_TABLE) {
@@ -329,8 +325,8 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 }
                 break;
             case GHWP_TAG_PARA_RANGE_TAG:
-                paragraph = g_array_index (section->paragraphs, GHWPParagraph *,
-                                           section->paragraphs->len - 1);
+                paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
+                                           page->paragraphs->len - 1);
                 if (context->status != STATE_INSIDE_TABLE) {
                     ghwp_parse_paragraph_range_tag (paragraph, context);
                 } else if (context->status == STATE_INSIDE_TABLE) {
@@ -387,29 +383,16 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     ...
                     list-header (21)
             */
-            {
-                GHWPTable     *table;
-                GHWPParagraph *paragraph;
                 table = ghwp_table_new_from_context (context);
-                paragraph = g_array_index (doc->paragraphs, GHWPParagraph *,
-                                           doc->paragraphs->len - 1);
+                paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
+                                           page->paragraphs->len - 1);
                 ghwp_paragraph_set_table (paragraph, table);
-            }
                 break;
             case GHWP_TAG_LIST_HEADER:
                 /* TODO ctrl_id 에 따른 객체를 생성한다 */
                 switch (context->status) {
                 /* table에 cell을 추가한다 */
                 case STATE_INSIDE_TABLE:
-                {
-                    GHWPParagraph *paragraph;
-                    GHWPTable     *table;
-                    GHWPTableCell *cell;
-
-                    paragraph = g_array_index (doc->paragraphs, GHWPParagraph *,
-                                               doc->paragraphs->len - 1);
-
-                    table = ghwp_paragraph_get_table (paragraph);
                     cell  = ghwp_table_cell_new_from_context(context);
                     if (GHWP_IS_TABLE(table)) {
                         ghwp_table_add_cell (table, cell);
@@ -426,7 +409,6 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                         g_array_append_val (page->paragraphs, paragraph);
                         y = 0.0;
                     }
-                }
                     break;
                 default:
                     break;
