@@ -72,40 +72,30 @@ once_ft_init_and_new (void)
     }
 }
 
-static void draw_text(cairo_t             *cr,
-                      cairo_text_extents_t extents,
-                      cairo_glyph_t       *glyphs,
-                      cairo_scaled_font_t *scaled_font,
-                      const gchar         *text,
-                      double              *x,
-                      double              *y)
+static void draw_text_line (cairo_t             *cr,
+                            cairo_scaled_font_t *font,
+                            double               x,
+                            double               y,
+                            const gchar         *text,
+                            gint                 start,
+                            gint                 end)
 {
-    gchar *ch = NULL;
+    gchar *str;
     int    num_glyphs;
-    guint  j;
-    for (j = 0; j < g_utf8_strlen(text, -1); j++) {
-        ch = g_utf8_substring(text, j, j+1);
+    cairo_glyph_t *glyphs = NULL; /* NULL로 지정하면 자동 할당됨 */
 
-        cairo_scaled_font_text_to_glyphs (scaled_font, *x, *y, ch, -1,
-                                          &glyphs, &num_glyphs,
-                                          NULL, NULL, NULL);
-        _g_free0 (ch);
-        cairo_glyph_extents(cr, glyphs, num_glyphs, &extents);
+    if (start >= end)
+        return;
 
-        if (*x >= 595.0 - extents.x_advance - 20.0) {
-            glyphs[0].x  = 20.0;
-            glyphs[0].y += 16.0;
-            *x  = 20.0 + extents.x_advance;
-            *y += 16.0;
-        }
-        else {
-            *x += extents.x_advance;
-        }
+    str = g_utf8_substring (text, start, end);
 
-        cairo_show_glyphs (cr, glyphs, num_glyphs);
-    }
+    cairo_scaled_font_text_to_glyphs (font, x, y, str, -1,
+                                      &glyphs, &num_glyphs,
+                                      NULL, NULL, NULL);
+    cairo_show_glyphs (cr, glyphs, num_glyphs);
 
-    *y += 18.0;
+    cairo_glyph_free (glyphs);
+    _g_free0 (str);
 }
 
 gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
@@ -119,14 +109,14 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
     GHWPText      *ghwp_text;
     GHWPTable     *table;
     GHWPTableCell *cell;
+    GHWPPageDef   *page_info;
+    GHWPLineSeg   *line;
 
-    cairo_glyph_t        *glyphs = NULL; /* NULL로 지정하면 자동 할당됨 */
     cairo_scaled_font_t  *scaled_font;
     cairo_font_face_t    *font_face;
     cairo_matrix_t        font_matrix;
     cairo_matrix_t        ctm;
     cairo_font_options_t *font_options;
-    cairo_text_extents_t  extents;
 
     double x = 20.0;
     double y = 40.0;
@@ -146,37 +136,84 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
     cairo_set_scaled_font(cr, scaled_font); /* 요 문장 없으면 fault 떨어짐 */
     cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
 
+    page_info = &page->section->page_info;
+
     for (i = 0; i < page->paragraphs->len; i++) {
         paragraph = g_array_index (page->paragraphs, GHWPParagraph *, i);
         ghwp_text = paragraph->ghwp_text;
-        x = 20.0;
+
         /* draw text */
         if ((ghwp_text != NULL) && !(g_str_equal(ghwp_text->text, "\n\r"))) {
-            draw_text(cr, extents, glyphs, scaled_font, ghwp_text->text,
-                      &x, &y);
+            for (j = paragraph->line_start; j < paragraph->line_end; j++) {
+                gint text_end;
+                line = g_array_index (paragraph->line_segs, GHWPLineSeg *, j);
+
+                if (j == paragraph->header.n_line_segs - 1)
+                    text_end = g_utf8_strlen(ghwp_text->text, -1);
+                else {
+                    GHWPLineSeg *next_line = g_array_index (paragraph->line_segs,
+                                                            GHWPLineSeg *, j + 1);
+                    text_end = next_line->text_start;
+                }
+
+                draw_text_line(cr, scaled_font, (page_info->l_margin + line->col_offset) / GHWP_PPU,
+                               (page_info->t_margin + page_info->header + line->v_pos) / GHWP_PPU,
+                               ghwp_text->text, line->text_start, text_end);
+            }
         }
         /* draw table */
         table = ghwp_paragraph_get_table (paragraph);
         if (table != NULL) {
+            line = g_array_index (paragraph->line_segs, GHWPLineSeg *, 0);
+
+            x = page_info->l_margin;
+            y = page_info->t_margin + page_info->header + line->v_pos;
+
+            guint l;
+            guint cell_width = 0;
+
             for (j = 0; j < table->cells->len; j++) {
                 cell = g_array_index(table->cells, GHWPTableCell *, j);
+
+                if (cell->col_addr == 0) {
+                    x = page_info->l_margin;
+
+                    if (j != 0)
+                        y += cell->height / table->n_rows;
+                } else {
+                    x += cell_width;
+                }
+
                 for (k = 0; k < cell->paragraphs->len; k++) {
                     paragraph = g_array_index(cell->paragraphs,
                                               GHWPParagraph *, k);
                     if (paragraph->ghwp_text) {
-                        /* FIXME x, y 좌표 */
-                        x = 40.0 + (595.5 - 40.0) / table->n_cols * cell->col_addr;
-                        if (cell->col_addr != 0)
-                            y -= 16.0;
-                        draw_text(cr, extents, glyphs, scaled_font,
-                                  paragraph->ghwp_text->text, &x, &y);
+                        for (l = paragraph->line_start; l < paragraph->line_end; l++) {
+                            gint text_end;
+
+                            ghwp_text = paragraph->ghwp_text;
+                            line = g_array_index (paragraph->line_segs, GHWPLineSeg *, l);
+
+                            if (l == paragraph->header.n_line_segs - 1) {
+                                text_end = g_utf8_strlen(ghwp_text->text, -1);
+                            } else {
+                                GHWPLineSeg *next_line = g_array_index (paragraph->line_segs,
+                                                                        GHWPLineSeg *, l + 1);
+                                text_end = next_line->text_start;
+                            }
+
+                            draw_text_line(cr, scaled_font, (x + line->col_offset + cell->left_margin) / GHWP_PPU,
+                                           (y + line->v_pos + cell->top_margin) / GHWP_PPU,
+                                           ghwp_text->text, line->text_start, text_end);
+                        }
                     }
                 }
+
+                cell_width  = cell->width;
             }
         }
     }
 
-    cairo_glyph_free (glyphs);
     cairo_scaled_font_destroy (scaled_font);
 
     cairo_restore (cr);
