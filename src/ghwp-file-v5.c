@@ -295,7 +295,15 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
                 switch (ctrl_id) {
                 case CTRL_ID_TABLE:
-                    curr_status->s = STATE_TABLE;
+                    table = ghwp_table_new ();
+                    table->obj.ctrl_id = ctrl_id;
+                    ghwp_parse_common_object (&table->obj, context);
+
+                    paragraph = curr_status->p;
+                    ghwp_paragraph_set_table (paragraph, table);
+
+                    curr_status->s = STATE_CTRL_TABLE;
+                    curr_status->p = table;
                     break;
                 case CTRL_ID_SEC_DEF:
                     ghwp_parse_section_def (section, context);
@@ -310,50 +318,23 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 break;
 
             case GHWP_TAG_TABLE:
-            /*
-                  \  col 0   col 1
-                   +-------+-------+
-            row 0  |  00   |   01  |
-                   +-------+-------+
-            row 1  |  10   |   11  |
-                   +-------+-------+
-            row 2  |  20   |   21  |
-                   +-------+-------+
-
-            <table> ::= { <list-header> <para-header>+ }+
-
-            para-header
-                ...
-                ctrl-header (id:tbl)
-                    table: row-count, col-count
-                    list-header (00)
-                    ...
-                    list-header (01)
-                    ...
-                    list-header (10)
-                    ...
-                    list-header (11)
-                    ...
-                    list-header (20)
-                    ...
-                    list-header (21)
-            */
-                paragraph = context->status[context->level - 2].p;
-
-                table = ghwp_table_new_from_context (context);
-                ghwp_paragraph_set_table (paragraph, table);
+                table = context->status[context->level - 1].p;
+                ghwp_parse_table_attr (table, context);
 
                 curr_status->s = STATE_TABLE;
-                curr_status->p = table;
                 break;
 
             case GHWP_TAG_LIST_HEADER:
                 /* TODO ctrl_id 에 따른 객체를 생성한다 */
                 switch (curr_status->s) {
                 /* table에 cell을 추가한다 */
+                case STATE_CTRL_TABLE:
+                    /* caption */
+                    break;
                 case STATE_TABLE:
-                    table = curr_status->p;
-                    cell  = ghwp_table_cell_new_from_context(context);
+                    table = context->status[context->level - 1].p;
+                    cell  = ghwp_table_cell_new ();
+                    ghwp_parse_table_cell_attr (cell, context);
                     /* FIXME 테이블 내에서 페이지가 나누어지는 경우 처리 */
                     ghwp_table_add_cell (table, cell);
                     curr_status->p = cell;

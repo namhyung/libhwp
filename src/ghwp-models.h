@@ -33,9 +33,87 @@
 
 G_BEGIN_DECLS
 
+#define OBJ_ATTR_LIKE_TEXT              (1U << 0)
+#define OBJ_ATTR_RESERVED               (1U << 1)
+#define OBJ_ATTR_AFFECT_LINE            (1U << 2)
+#define OBJ_ATTR_VERT_REL_TO_MASK       (3U << 3)
+#define OBJ_ATTR_VERT_REL_ARRANGE_MASK  (7U << 5)
+#define OBJ_ATTR_HORZ_REL_TO_MASK       (3U << 8)
+#define OBJ_ATTR_HORZ_REL_ARRANGE_MASK  (7U << 10)
+#define OBJ_ATTR_ALLOW_OVERLAP          (1U << 14)
+#define OBJ_ATTR_WIDTH_START_MASK       (7U << 15)
+#define OBJ_ATTR_HEIGHT_START_MASK      (3U << 18)
+#define OBJ_ATTR_TEXT_FLOW_MASK         (7U << 21)
+#define OBJ_ATTR_TEXT_SIDE_MASK         (3U << 24)
+#define OBJ_ATTR_CATEGORY_MASK          (3U << 26)
+
+/* use with OBJ_ATTR_VERT_REL_TO_MASK */
+#define OBJ_ATTR_VERT_REL_TO_PAPER  (0U << 3)
+#define OBJ_ATTR_VERT_REL_TO_PAGE   (1U << 3)
+#define OBJ_ATTR_VERT_REL_TO_PARA   (2U << 3)
+
+/* use with OBJ_ATTR_HORZ_REL_TO_MASK */
+#define OBJ_ATTR_HORZ_REL_TO_PAPER  (0U << 8)
+#define OBJ_ATTR_HORZ_REL_TO_PAGE   (1U << 8)
+#define OBJ_ATTR_HORZ_REL_TO_COLUMN (2U << 8)
+#define OBJ_ATTR_HORZ_REL_TO_PARA   (3U << 8)
+
+/* use with OBJ_ATTR_WIDTH_START_MASK */
+#define OBJ_ATTR_WIDTH_START_PAPER  (0U << 15)
+#define OBJ_ATTR_WIDTH_START_PAGE   (1U << 15)
+#define OBJ_ATTR_WIDTH_START_COLUMN (2U << 15)
+#define OBJ_ATTR_WIDTH_START_PARA   (3U << 15)
+#define OBJ_ATTR_WIDTH_START_ABS    (4U << 15)
+
+/* use with OBJ_ATTR_HEIGHT_START_MASK */
+#define OBJ_ATTR_HEIGHT_START_PAPER  (0U << 18)
+#define OBJ_ATTR_HEIGHT_START_PAGE   (1U << 18)
+#define OBJ_ATTR_HEIGHT_START_ABS    (2U << 18)
+
+/* use with OBJ_ATTR_TEXT_FLOW_MASK */
+#define OBJ_ATTR_TEXT_FLOW_SQUARE   (0U << 21)
+#define OBJ_ATTR_TEXT_FLOW_TIGHT    (1U << 21)
+#define OBJ_ATTR_TEXT_FLOW_THROUGH  (2U << 21)
+#define OBJ_ATTR_TEXT_FLOW_TOP_BOT  (3U << 21)
+#define OBJ_ATTR_TEXT_FLOW_BEHIND   (4U << 21)
+#define OBJ_ATTR_TEXT_FLOW_FRONT    (5U << 21)
+
+/* use with OBJ_ATTR_TEXT_SIDE_MASK */
+#define OBJ_ATTR_TEXT_SIDE_BOTH     (0U << 24)
+#define OBJ_ATTR_TEXT_SIDE_LEFT     (1U << 24)
+#define OBJ_ATTR_TEXT_SIDE_RIGHT    (2U << 24)
+#define OBJ_ATTR_TEXT_SIDE_LARGEST  (3U << 24)
+
+/* use with OBJ_ATTR_CATEGORY_MASK */
+#define OBJ_ATTR_CATEGORY_NONE      (0U << 26)
+#define OBJ_ATTR_CATEGORY_FIGURE    (1U << 26)
+#define OBJ_ATTR_CATEGORY_TABLE     (2U << 26)
+#define OBJ_ATTR_CATEGORY_EQUATION  (3U << 26)
+
+struct _GHWPObject {
+    guint32      ctrl_id;
+    guint32      attr;        /* 표 70 및 위의 OBJ_ATTR 매크로 정의 참조 */
+    ghwp_unit    v_offset;
+    ghwp_unit    h_offset;
+    ghwp_unit    width;
+    ghwp_unit    height;
+    gint32       z_order;
+    ghwp_unit16  l_spacing;  /* left */
+    ghwp_unit16  r_spacing;  /* right */
+    ghwp_unit16  t_spacing;  /* top */
+    ghwp_unit16  b_spacing;  /* bottom */
+    guint32      instance_id;
+    gint32       page_split;
+    guint16      n_desc;
+    gchar       *desc;
+};
+
 typedef struct _GHWPText      GHWPText;
 typedef struct _GHWPTable     GHWPTable;
 typedef struct _GHWPTableCell GHWPTableCell;
+typedef struct _GHWPObject    GHWPObject;
+
+void ghwp_parse_common_object (GHWPObject *obj, GHWPContext *ctx);
 
 /** GHWPParagraph ************************************************************/
 
@@ -192,28 +270,29 @@ struct _GHWPTableClass
 
 struct _GHWPTable
 {
-    GObject  parent_instance;
-    guint32  flags;
-    guint16  n_rows; /* 행 개수 */
-    guint16  n_cols; /* 열 개수 */
-    guint16  cell_spacing; /* 셀과 셀 사이의 간격 hwpuint */
-    /* margin */
-    guint16  left_margin;
-    guint16  right_margin;
-    guint16  top_margin;
-    guint16  bottom_margin;
+    GObject      parent_instance;
+    GHWPObject   obj;
+    guint32      flags;
+    guint16      n_rows; /* 행 개수 */
+    guint16      n_cols; /* 열 개수 */
+    ghwp_unit16  cell_spacing; /* 셀과 셀 사이의 간격 */
+    ghwp_unit16  l_margin;
+    ghwp_unit16  r_margin;
+    ghwp_unit16  t_margin;
+    ghwp_unit16  b_margin;
 
-    guint16 *row_sizes;
-    guint16  border_fill_id;
-    guint16  valid_zone_info_size;
-    guint16 *zones;
+    ghwp_unit16 *row_sizes;
+    guint16      border_fill_id;
+    guint16      valid_zone_info_size;
+    guint16     *zones;
 
-    GArray  *cells;
+    GArray      *cells;
 };
 
 GType          ghwp_table_get_type         (void) G_GNUC_CONST;
 GHWPTable     *ghwp_table_new              (void);
-GHWPTable     *ghwp_table_new_from_context (GHWPContext   *context);
+void           ghwp_parse_table_attr       (GHWPTable     *table,
+                                            GHWPContext   *context);
 GHWPTableCell *ghwp_table_get_last_cell    (GHWPTable     *table);
 void           ghwp_table_add_cell         (GHWPTable     *table,
                                             GHWPTableCell *cell);
@@ -233,23 +312,24 @@ typedef struct _GHWPTableCellClass GHWPTableCellClass;
 struct _GHWPTableCell
 {
     GObject parent_instance;
-    /* 표 60 */
+
+    /* XXX ? */
     guint16 n_paragraphs;
     guint32 flags;
     guint16 unknown;
-    /* 표 75 */
+
     guint16 col_addr;
     guint16 row_addr;
     guint16 col_span;
     guint16 row_span;
 
-    guint32 width;  /* hwpunit */
-    guint32 height; /* hwpunit */
+    ghwp_unit width;
+    ghwp_unit height;
 
-    guint16 left_margin;
-    guint16 right_margin;
-    guint16 top_margin;
-    guint16 bottom_margin;
+    ghwp_unit16 l_margin;
+    ghwp_unit16 r_margin;
+    ghwp_unit16 t_margin;
+    ghwp_unit16 b_margin;
 
     guint16 border_fill_id;
 
@@ -263,10 +343,11 @@ struct _GHWPTableCellClass
 
 GType          ghwp_table_cell_get_type           (void) G_GNUC_CONST;
 GHWPTableCell *ghwp_table_cell_new                (void);
-GHWPTableCell *ghwp_table_cell_new_from_context   (GHWPContext   *context);
 GHWPParagraph *ghwp_table_cell_get_last_paragraph (GHWPTableCell *cell);
 void           ghwp_table_cell_add_paragraph      (GHWPTableCell *cell,
                                                    GHWPParagraph *paragraph);
+GHWPTableCell *ghwp_parse_table_cell_attr         (GHWPTableCell *cell,
+                                                   GHWPContext   *context);
 
 G_END_DECLS
 

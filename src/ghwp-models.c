@@ -33,6 +33,36 @@
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define _g_free0(var) (var = (g_free (var), NULL))
 
+void ghwp_parse_common_object (GHWPObject *obj, GHWPContext *ctx)
+{
+    /* must be called after reading ctrl id */
+    context_read_uint32 (ctx, &obj->attr);
+    context_read_hwp_unit (ctx, &obj->v_offset);
+    context_read_hwp_unit (ctx, &obj->h_offset);
+    context_read_hwp_unit (ctx, &obj->width);
+    context_read_hwp_unit (ctx, &obj->height);
+    context_read_int32 (ctx, &obj->z_order);
+    context_read_hwp_unit16 (ctx, &obj->l_spacing);
+    context_read_hwp_unit16 (ctx, &obj->r_spacing);
+    context_read_hwp_unit16 (ctx, &obj->t_spacing);
+    context_read_hwp_unit16 (ctx, &obj->b_spacing);
+    context_read_uint32 (ctx, &obj->instance_id);
+    context_read_int32 (ctx, &obj->page_split);
+    context_read_uint16 (ctx, &obj->n_desc);
+
+    gunichar2 ch; /* guint16 */
+    GString  *text = g_string_new ("");
+    guint     i;
+
+    for (i = 0; i < obj->n_desc; i++)
+    {
+        context_read_uint16 (ctx, &ch);
+        g_string_append_unichar (text, ch);
+    }
+
+    obj->desc = g_string_free (text, FALSE);
+}
+
 /** GHWPText *****************************************************************/
 
 G_DEFINE_TYPE (GHWPText, ghwp_text, G_TYPE_OBJECT);
@@ -281,29 +311,19 @@ void hexdump(guint8 *data, guint16 data_len)
     printf("\n-----------------------------------------------\n");
 }
 
-GHWPTable *ghwp_table_new_from_context (GHWPContext *context)
+void ghwp_parse_table_attr (GHWPTable *table, GHWPContext *context)
 {
-    g_return_val_if_fail (context != NULL, NULL);
-    GHWPTable *table = ghwp_table_new ();
+    g_return_if_fail (context != NULL);
     int        i;
 
     context_read_uint32 (context, &table->flags);
     context_read_uint16 (context, &table->n_rows);
     context_read_uint16 (context, &table->n_cols);
-    context_read_uint16 (context, &table->cell_spacing);
-    context_read_uint16 (context, &table->left_margin);
-    context_read_uint16 (context, &table->right_margin);
-    context_read_uint16 (context, &table->top_margin);
-    context_read_uint16 (context, &table->bottom_margin);
-
-/*    printf("%d %d %d %d %d %d %d %d\n", table->flags,*/
-/*                                        table->n_rows,*/
-/*                                        table->n_cols,*/
-/*                                        table->cell_spacing,*/
-/*                                        table->left_margin,*/
-/*                                        table->right_margin,*/
-/*                                        table->top_margin,*/
-/*                                        table->bottom_margin);*/
+    context_read_hwp_unit16 (context, &table->cell_spacing);
+    context_read_hwp_unit16 (context, &table->l_margin);
+    context_read_hwp_unit16 (context, &table->r_margin);
+    context_read_hwp_unit16 (context, &table->t_margin);
+    context_read_hwp_unit16 (context, &table->b_margin);
 
     table->row_sizes = g_malloc0_n (table->n_rows, 2);
 
@@ -312,18 +332,20 @@ GHWPTable *ghwp_table_new_from_context (GHWPContext *context)
     }
 
     context_read_uint16 (context, &table->border_fill_id);
-    context_read_uint16 (context, &table->valid_zone_info_size);
 
-    table->zones = g_malloc0_n (table->valid_zone_info_size, 2);
+    if (context_check_version (context, 5, 0, 1, 0)) {
+        context_read_uint16 (context, &table->valid_zone_info_size);
 
-    for (i = 0; i < table->valid_zone_info_size; i++) {
-        context_read_uint16 (context, &(table->zones[i]));
+        table->zones = g_malloc0_n (table->valid_zone_info_size, 2);
+
+        for (i = 0; i < table->valid_zone_info_size; i++) {
+            context_read_uint16 (context, &(table->zones[i]));
+        }
     }
 
     if (context->data_count != context->data_len) {
         g_warning ("%s:%d: table size mismatch\n", __FILE__, __LINE__);
     }
-    return table;
 }
 
 static void
@@ -393,50 +415,33 @@ GHWPTableCell *ghwp_table_cell_new (void)
     return (GHWPTableCell *) g_object_new (GHWP_TYPE_TABLE_CELL, NULL);
 }
 
-GHWPTableCell *ghwp_table_cell_new_from_context (GHWPContext *context)
+GHWPTableCell *ghwp_parse_table_cell_attr (GHWPTableCell *table_cell,
+                                           GHWPContext *context)
 {
     g_return_val_if_fail (context != NULL, NULL);
 
-    GHWPTableCell *table_cell = ghwp_table_cell_new ();
-    /* 표 60 */
     context_read_uint16 (context, &table_cell->n_paragraphs);
     context_read_uint32 (context, &table_cell->flags);
     context_read_uint16 (context, &table_cell->unknown);
+
     /* 표 75 */
     context_read_uint16 (context, &table_cell->col_addr);
     context_read_uint16 (context, &table_cell->row_addr);
     context_read_uint16 (context, &table_cell->col_span);
     context_read_uint16 (context, &table_cell->row_span);
 
-    context_read_uint32 (context, &table_cell->width);
-    context_read_uint32 (context, &table_cell->height);
+    context_read_hwp_unit (context, &table_cell->width);
+    context_read_hwp_unit (context, &table_cell->height);
 
-    context_read_uint16 (context, &table_cell->left_margin);
-    context_read_uint16 (context, &table_cell->right_margin);
-    context_read_uint16 (context, &table_cell->top_margin);
-    context_read_uint16 (context, &table_cell->bottom_margin);
+    context_read_hwp_unit16 (context, &table_cell->l_margin);
+    context_read_hwp_unit16 (context, &table_cell->r_margin);
+    context_read_hwp_unit16 (context, &table_cell->t_margin);
+    context_read_hwp_unit16 (context, &table_cell->b_margin);
 
     context_read_uint16 (context, &table_cell->border_fill_id);
 
-/*    printf("%d %d %d\n%d %d %d %d\n%d %d\n%d %d %d %d\n%d\n",*/
-/*        table_cell->n_paragraphs, table_cell->flags, table_cell->unknown,*/
-
-/*        table_cell->col_addr,*/
-/*        table_cell->row_addr,*/
-/*        table_cell->col_span,*/
-/*        table_cell->row_span,*/
-
-/*        table_cell->width, table_cell->height,*/
-
-/*        table_cell->left_margin,*/
-/*        table_cell->right_margin,*/
-/*        table_cell->top_margin,*/
-/*        table_cell->bottom_margin,*/
-
-/*        table_cell->border_fill_id);*/
-
     if (context->data_count != context->data_len) {
-        g_printf ("%s:%d: table cell size mismatch\n", __FILE__, __LINE__);
+        //g_printf ("%s:%d: table cell size mismatch\n", __FILE__, __LINE__);
     }
     return table_cell;
 }

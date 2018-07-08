@@ -202,8 +202,8 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                                 text_end = next_line->text_start;
                             }
 
-                            draw_text_line(cr, scaled_font, (x + line->col_offset + cell->left_margin) / GHWP_UPP,
-                                           (y + line->v_pos + cell->top_margin) / GHWP_UPP,
+                            draw_text_line(cr, scaled_font, (x + line->col_offset + cell->l_margin) / GHWP_UPP,
+                                           (y + line->v_pos + cell->t_margin) / GHWP_UPP,
                                            ghwp_text->text, line->text_start, text_end);
                         }
                     }

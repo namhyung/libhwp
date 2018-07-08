@@ -43,6 +43,7 @@ typedef enum
 {
     STATE_NORMAL,
     STATE_PARAGRAPH,
+    STATE_CTRL_TABLE,
     STATE_TABLE,
 } GHWPContextState;
 
