@@ -245,6 +245,24 @@ gboolean context_read_hwp_color (GHWPContext *context, ghwp_color *i)
     return TRUE;
 }
 
+gboolean context_check_version (GHWPContext  *context,
+				guint8        major,
+				guint8        minor,
+				guint8        micro,
+				guint8        extra)
+{
+    if (context->version[0] < major)
+        return FALSE;
+    if (context->version[1] < minor)
+        return FALSE;
+    if (context->version[2] < micro)
+        return FALSE;
+    if (context->version[3] < extra)
+        return FALSE;
+
+    return TRUE;
+}
+
 GHWPContext* ghwp_context_new (GInputStream* stream)
 {
     g_return_val_if_fail (stream != NULL, NULL);

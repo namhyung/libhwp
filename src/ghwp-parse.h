@@ -58,6 +58,7 @@ struct _GHWPContext {
     guint16             data_len;
     guint16             data_count;
     guint8              status;
+    guint8              version[4];
 };
 
 struct _GHWPContextClass {
@@ -94,6 +95,11 @@ gboolean     context_read_hwp_color  (GHWPContext  *context,
                                       ghwp_color   *i);
 gboolean     context_skip            (GHWPContext  *context,
                                       guint16       count);
+gboolean     context_check_version   (GHWPContext  *context,
+				      guint8        major,
+				      guint8        minor,
+				      guint8        micro,
+				      guint8        extra);
 
 G_END_DECLS
 

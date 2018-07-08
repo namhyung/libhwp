@@ -227,6 +227,10 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         section_stream = _g_object_ref0 (section_stream);
 
         context = ghwp_context_new (section_stream);
+        context->version[0] = file->major_version;
+        context->version[1] = file->minor_version;
+        context->version[2] = file->micro_version;
+        context->version[3] = file->extra_version;
 
         while (ghwp_context_pull(context, error)) {
             curr_lv = (guint) context->level;

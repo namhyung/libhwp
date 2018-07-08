@@ -151,6 +151,7 @@ typedef struct _GHWPFileV5    GHWPFileV5;
 typedef struct _GHWPFileV3    GHWPFileV3;
 typedef struct _GHWPPage      GHWPPage;
 typedef struct _GHWPRectangle GHWPRectangle;
+typedef struct _GHWPContext   GHWPContext;
 
 G_END_DECLS
 
