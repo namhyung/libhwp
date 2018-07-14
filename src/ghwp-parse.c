@@ -224,6 +224,27 @@ gboolean context_read_hwp_unit (GHWPContext *context, ghwp_unit *i)
     return TRUE;
 }
 
+gboolean context_read_hwp_color (GHWPContext *context, ghwp_color *i)
+{
+    g_return_val_if_fail (context != NULL, FALSE);
+    g_return_val_if_fail (context->data_count <= context->data_len - 4, FALSE);
+
+    gboolean is_success = FALSE;
+    is_success = g_input_stream_read_all (context->stream, i, 4,
+                                          &context->priv->bytes_read,
+                                          NULL, NULL);
+    if ((is_success == FALSE) ||
+        (context->priv->bytes_read != 4))
+    {
+        *i = 0;
+        g_input_stream_close (context->stream, NULL, NULL);
+        return FALSE;
+    }
+    *i = GUINT32_FROM_LE(*i);
+    context->data_count += 4;
+    return TRUE;
+}
+
 GHWPContext* ghwp_context_new (GInputStream* stream)
 {
     g_return_val_if_fail (stream != NULL, NULL);

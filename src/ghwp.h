@@ -33,6 +33,11 @@ G_BEGIN_DECLS
 
 typedef guint32  ghwp_unit;
 typedef guint16  ghwp_unit16;
+typedef guint32  ghwp_color;
+
+#define GHWP_COLOR_R(c)  (((c >>  0) & 0xff) / 256.0)
+#define GHWP_COLOR_G(c)  (((c >>  8) & 0xff) / 256.0)
+#define GHWP_COLOR_B(c)  (((c >> 16) & 0xff) / 256.0)
 
 GQuark ghwp_error_quark (void);
 

@@ -90,6 +90,8 @@ gboolean     context_read_hwp_unit   (GHWPContext  *context,
                                       ghwp_unit    *i);
 gboolean     context_read_hwp_unit16 (GHWPContext  *context,
                                       ghwp_unit16  *i);
+gboolean     context_read_hwp_color  (GHWPContext  *context,
+                                      ghwp_color   *i);
 gboolean     context_skip            (GHWPContext  *context,
                                       guint16       count);
 
