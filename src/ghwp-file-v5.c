@@ -204,6 +204,7 @@ typedef enum
 {
     CTRL_ID_TABLE		= GUINT32_FROM_LE(MAKE_CTRL_ID('t', 'b', 'l', ' ')),
     CTRL_ID_SEC_DEF		= GUINT32_FROM_LE(MAKE_CTRL_ID('s', 'e', 'c', 'd')),
+    CTRL_ID_COL_DEF		= GUINT32_FROM_LE(MAKE_CTRL_ID('c', 'o', 'l', 'd')),
 } CtrlID;
 
 /* TODO fsm parser, nautilus에서 파일 속성만 보는 경우가 있으므로 속도 문제
@@ -308,6 +309,9 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     break;
                 case CTRL_ID_SEC_DEF:
                     ghwp_parse_section_def (section, context);
+                    break;
+                case CTRL_ID_COL_DEF:
+                    ghwp_parse_column_def (section, context);
                     break;
                 default:
                     context->status = STATE_NORMAL;

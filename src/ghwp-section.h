@@ -40,7 +40,8 @@ G_BEGIN_DECLS
 
 typedef struct _GHWPSectionClass   GHWPSectionClass;
 typedef struct _GHWPSectionDef     GHWPSectionDef;
-typedef struct _GHWPPageDef     GHWPPageDef;
+typedef struct _GHWPPageDef        GHWPPageDef;
+typedef struct _GHWPColumnDef      GHWPColumnDef;
 
 struct _GHWPSectionDef
 {
@@ -71,11 +72,25 @@ struct _GHWPPageDef
     guint32    attr;
 };
 
+#define COL_ATTR_SAME_WIDTH  (1U << 12)
+
+struct _GHWPColumnDef
+{
+    guint32      attr;
+    ghwp_unit16  spacing;
+    gint         n_cols;
+    guint8       border_kind;
+    guint8       border_weight;
+    ghwp_color   border_color;
+    guint16     *col_widths;
+};
+
 struct _GHWPSection
 {
     GObject         parent_instance;
     GHWPSectionDef  def_info;
     GHWPPageDef     page_info;
+    GHWPColumnDef   col_info;
 };
 
 struct _GHWPSectionClass
@@ -86,10 +101,12 @@ struct _GHWPSectionClass
 GType        ghwp_section_get_type   (void) G_GNUC_CONST;
 GHWPSection *ghwp_section_new        (void);
 
-gboolean ghwp_parse_section_def (GHWPSection *sec,
-                                 GHWPContext *ctx);
-gboolean ghwp_parse_page_def (GHWPSection *sec,
-                              GHWPContext *ctx);
+gboolean ghwp_parse_section_def      (GHWPSection *sec,
+                                      GHWPContext *ctx);
+gboolean ghwp_parse_page_def         (GHWPSection *sec,
+                                      GHWPContext *ctx);
+gboolean ghwp_parse_column_def       (GHWPSection *sec,
+                                      GHWPContext *ctx);
 
 G_END_DECLS
 

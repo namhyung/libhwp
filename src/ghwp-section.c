@@ -79,3 +79,35 @@ gboolean ghwp_parse_page_def (GHWPSection *sec, GHWPContext *ctx)
 
     return TRUE;
 }
+
+gboolean ghwp_parse_column_def (GHWPSection *sec, GHWPContext *ctx)
+{
+    guint16 attr;
+
+    g_return_val_if_fail (sec != NULL, FALSE);
+
+    context_read_uint16 (ctx, &attr);
+    sec->col_info.attr = attr;
+
+    sec->col_info.n_cols = (sec->col_info.attr >> 2) & 0xff;
+
+    sec->col_info.col_widths = NULL;
+    if (sec->col_info.attr & COL_ATTR_SAME_WIDTH) {
+        gint i;
+
+        sec->col_info.col_widths = calloc(sec->col_info.n_cols,
+                                          sizeof (guint16));
+
+        for (i = 0; i < sec->col_info.n_cols; i++)
+            context_read_uint16 (ctx, &sec->col_info.col_widths[i]);
+    }
+
+    context_read_uint16 (ctx, &attr);
+    sec->col_info.attr |= ((guint32) attr) << 16;
+
+    context_read_uint8 (ctx, &sec->col_info.border_kind);
+    context_read_uint8 (ctx, &sec->col_info.border_weight);
+    context_read_hwp_color (ctx, &sec->col_info.border_color);
+
+    return TRUE;
+}
