@@ -91,6 +91,7 @@ struct _GHWPSection
     GHWPSectionDef  def_info;
     GHWPPageDef     page_info;
     GHWPColumnDef   col_info;
+    GArray         *paragraphs;
 };
 
 struct _GHWPSectionClass
@@ -107,6 +108,8 @@ gboolean ghwp_parse_page_def         (GHWPSection *sec,
                                       GHWPContext *ctx);
 gboolean ghwp_parse_column_def       (GHWPSection *sec,
                                       GHWPContext *ctx);
+void     ghwp_section_add_paragraph  (GHWPSection *sec,
+                                      GHWPParagraph *paragraph);
 
 G_END_DECLS
 

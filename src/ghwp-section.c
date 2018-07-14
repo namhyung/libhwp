@@ -30,6 +30,8 @@ GHWPSection *ghwp_section_new (void)
 
 static void ghwp_section_finalize (GObject *obj)
 {
+    GHWPSection *sec = GHWP_SECTION(obj);
+    g_array_free (sec->paragraphs, TRUE);
     G_OBJECT_CLASS (ghwp_section_parent_class)->finalize (obj);
 }
 
@@ -41,6 +43,7 @@ static void ghwp_section_class_init (GHWPSectionClass * klass)
 
 static void ghwp_section_init (GHWPSection *sec)
 {
+    sec->paragraphs = g_array_new (FALSE, FALSE, sizeof (GHWPParagraph *));
 }
 
 gboolean ghwp_parse_section_def (GHWPSection *sec, GHWPContext *ctx)
@@ -110,4 +113,9 @@ gboolean ghwp_parse_column_def (GHWPSection *sec, GHWPContext *ctx)
     context_read_hwp_color (ctx, &sec->col_info.border_color);
 
     return TRUE;
+}
+
+void ghwp_section_add_paragraph (GHWPSection *sec, GHWPParagraph *paragraph)
+{
+    g_array_append_val (sec->paragraphs, paragraph);
 }
