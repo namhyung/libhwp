@@ -29,6 +29,7 @@
 #define __GHWP_MODELS_H__
 
 #include <glib-object.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include "ghwp.h"
 
 G_BEGIN_DECLS
@@ -139,9 +140,38 @@ typedef struct _GHWPTable      GHWPTable;
 typedef struct _GHWPTableCell  GHWPTableCell;
 typedef struct _GHWPObject     GHWPObject;
 typedef struct _GHWPListHeader GHWPListHeader;
+typedef struct _GHWPComponent GHWPComponent;
+typedef struct _GHWPRender    GHWPRender;
+typedef struct _GHWPPicture   GHWPPicture;
+
+struct _GHWPRender {
+    gint16       cnt;
+    gdouble      matrix[6];  /* 3 x 2 */
+    gdouble     *scale_matrix;
+    gdouble     *rorate_matrix;
+};
+
+struct _GHWPComponent {
+    guint32      ctrl_id;
+    gint32       x_offset;
+    gint32       y_offset;
+    guint16      n_groups;
+    guint16      local_version;
+    guint32      initial_width;
+    guint32      initial_height;
+    guint32      current_width;
+    guint32      current_height;
+    guint32      attr;
+    ghwp_unit16  angle;
+    gint32       x_center;
+    gint32       y_center;
+
+    GHWPRender   render;
+};
 
 void ghwp_parse_common_object (GHWPObject *obj, GHWPContext *ctx);
 void ghwp_parse_list_header (GHWPListHeader *hdr, GHWPContext *ctx);
+void ghwp_parse_shape_component (GHWPComponent *compo, GHWPContext *ctx);
 
 /** GHWPParagraph ************************************************************/
 
@@ -218,6 +248,7 @@ struct _GHWPParagraph
 
     GHWPText            *ghwp_text;
     GHWPTable           *table;
+    GHWPPicture         *picture;
 
     /* 문단이 다음 페이지로 이어지는 경우 */
     GHWPParagraph       *link;
@@ -238,6 +269,9 @@ GHWPText      *ghwp_paragraph_get_ghwp_text     (GHWPParagraph *paragraph);
 GHWPTable     *ghwp_paragraph_get_table         (GHWPParagraph *paragraph);
 void           ghwp_paragraph_set_table         (GHWPParagraph *paragraph,
                                                  GHWPTable     *table);
+GHWPPicture   *ghwp_paragraph_get_picture       (GHWPParagraph *paragraph);
+void           ghwp_paragraph_set_picture       (GHWPParagraph *paragraph,
+                                                 GHWPPicture   *pic);
 void           ghwp_paragraph_add_link          (GHWPParagraph *paragraph,
                                                  GHWPParagraph *link,
                                                  gint           line);
@@ -349,6 +383,105 @@ struct _GHWPTextClass
 GType     ghwp_text_get_type (void) G_GNUC_CONST;
 GHWPText *ghwp_text_new      (void);
 GHWPText *ghwp_text_append   (GHWPText *ghwp_text, const gchar *text);
+
+/** GHWPPicture *****************************************************************/
+
+#define GHWP_TYPE_PICTURE             (ghwp_picture_get_type ())
+#define GHWP_PICTURE(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GHWP_TYPE_PICTURE, GHWPPicture))
+#define GHWP_PICTURE_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GHWP_TYPE_PICTURE, GHWPPictureClass))
+#define GHWP_IS_PICTURE(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GHWP_TYPE_PICTURE))
+#define GHWP_IS_PICTURE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GHWP_TYPE_PICTURE))
+#define GHWP_PICTURE_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GHWP_TYPE_PICTURE, GHWPPictureClass))
+
+typedef struct _GHWPGSO            GHWPGSO;
+typedef struct _GHWPGSOClass       GHWPGSOClass;
+
+typedef struct _GHWPPicture        GHWPPicture;
+typedef struct _GHWPPictureClass   GHWPPictureClass;
+
+struct _GHWPPicture
+{
+    GObject        parent_instance;
+    guint32        border_color;
+    guint32        border_width;
+    guint32        border_attr;
+    gint32         border_x_pos[4];
+    gint32         border_y_pos[4];
+    gint32         cropped_left;
+    gint32         cropped_top;
+    gint32         cropped_right;
+    gint32         cropped_bottom;
+    ghwp_unit16    l_margin;
+    ghwp_unit16    r_margin;
+    ghwp_unit16    t_margin;
+    ghwp_unit16    b_margin;
+    gint8          brightness;
+    gint8          contrast;
+    guint8         effect;
+    guint16        binitem_id;
+    guint8         border_trans;
+    guint32        instance_id;
+
+    GInputStream  *stream;
+    GdkPixbuf     *pixbuf;
+    GHWPGSO       *gso;
+};
+
+struct _GHWPPictureClass
+{
+    GObjectClass parent_class;
+};
+
+GType        ghwp_picture_get_type (void) G_GNUC_CONST;
+GHWPPicture *ghwp_picture_new      (void);
+void         ghwp_parse_picture    (GHWPPicture *pic,
+                                    GHWPContext *ctx);
+
+void         ghwp_picture_set_gso  (GHWPPicture *pic,
+                                    GHWPGSO     *gso);
+
+/** GHWPTable ****************************************************************/
+
+#define GHWP_TYPE_GSO             (ghwp_gso_get_type ())
+#define GHWP_GSO(obj)             (G_TYPE_CHECK_INSTANCE_CAST ((obj), GHWP_TYPE_GSO, GHWPGSO))
+#define GHWP_GSO_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GHWP_TYPE_GSO, GHWPGSOClass))
+#define GHWP_IS_GSO(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GHWP_TYPE_GSO))
+#define GHWP_IS_GSO_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GHWP_TYPE_GSO))
+#define GHWP_GSO_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GHWP_TYPE_GSO, GHWPGSOClass))
+
+enum ghwp_gso_type {
+    GHWP_GSO_TYPE_LINE,
+    GHWP_GSO_TYPE_RECT,
+    GHWP_GSO_TYPE_ELLIPSIS,
+    GHWP_GSO_TYPE_ARC,
+    GHWP_GSO_TYPE_POLIGON,
+    GHWP_GSO_TYPE_CURVE,
+    GHWP_GSO_TYPE_EQUATION,
+    GHWP_GSO_TYPE_PICTURE,
+    GHWP_GSO_TYPE_OLE,
+    GHWP_GSO_TYPE_CONTAINER,
+
+    GHWP_NUM_GSO_TYPE,
+};
+
+struct _GHWPGSO {
+    GObject             parent_instance;
+    GHWPObject          object;
+    GHWPComponent       component;
+    enum ghwp_gso_type  type;
+
+    union {
+        GHWPPicture    *picture;
+    } u;
+};
+
+struct _GHWPGSOClass
+{
+    GObjectClass parent_class;
+};
+
+GType     ghwp_gso_get_type (void) G_GNUC_CONST;
+GHWPGSO  *ghwp_gso_new      (void);
 
 /** GHWPTable ****************************************************************/
 

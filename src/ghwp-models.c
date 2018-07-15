@@ -29,6 +29,7 @@
 
 #include "ghwp-models.h"
 #include "ghwp-parse.h"
+#include "ghwp-document.h"
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define _g_free0(var) (var = (g_free (var), NULL))
@@ -70,6 +71,26 @@ void ghwp_parse_list_header (GHWPListHeader *hdr, GHWPContext *ctx)
     context_read_int16 (ctx, &hdr->n_paragraphs);
     context_read_uint32 (ctx, &hdr->attr);
     context_read_int16 (ctx, &hdr->unknown);
+}
+
+void ghwp_parse_shape_component (GHWPComponent *compo, GHWPContext *ctx)
+{
+    context_read_uint32 (ctx, &compo->ctrl_id);
+    context_read_int32 (ctx, &compo->x_offset);
+    context_read_int32 (ctx, &compo->y_offset);
+    context_read_uint16 (ctx, &compo->n_groups);
+    context_read_uint16 (ctx, &compo->local_version);
+    context_read_uint32 (ctx, &compo->initial_width);
+    context_read_uint32 (ctx, &compo->initial_height);
+    context_read_uint32 (ctx, &compo->current_width);
+    context_read_uint32 (ctx, &compo->current_height);
+    context_read_uint32 (ctx, &compo->attr);
+    context_read_hwp_unit16 (ctx, &compo->angle);
+    context_read_int32 (ctx, &compo->x_center);
+    context_read_int32 (ctx, &compo->y_center);
+
+    context_read_int16 (ctx, &compo->render.cnt);
+    /* TODO: parse rendering info (matrix) */
 }
 
 /** GHWPText *****************************************************************/
@@ -125,6 +146,89 @@ static void ghwp_text_init (GHWPText *ghwp_text)
 {
 }
 
+/** GHWPPicture *****************************************************************/
+
+G_DEFINE_TYPE (GHWPPicture, ghwp_picture, G_TYPE_OBJECT);
+
+GHWPPicture *ghwp_picture_new (void)
+{
+    return (GHWPPicture *) g_object_new (GHWP_TYPE_PICTURE, NULL);
+}
+
+static void ghwp_picture_finalize (GObject *obj)
+{
+    G_OBJECT_CLASS (ghwp_picture_parent_class)->finalize (obj);
+}
+
+static void ghwp_picture_class_init (GHWPPictureClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->finalize     = ghwp_picture_finalize;
+}
+
+static void ghwp_picture_init (GHWPPicture *pic)
+{
+}
+
+void ghwp_parse_picture (GHWPPicture *pic, GHWPContext *ctx)
+{
+    gint i;
+
+    context_read_uint32 (ctx, &pic->border_color);
+    context_read_uint32 (ctx, &pic->border_width);
+    context_read_uint32 (ctx, &pic->border_attr);
+    for (i = 0; i < 4; i++)
+        context_read_int32 (ctx, &pic->border_x_pos[i]);
+    for (i = 0; i < 4; i++)
+        context_read_int32 (ctx, &pic->border_y_pos[i]);
+    context_read_int32 (ctx, &pic->cropped_left);
+    context_read_int32 (ctx, &pic->cropped_top);
+    context_read_int32 (ctx, &pic->cropped_right);
+    context_read_int32 (ctx, &pic->cropped_bottom);
+    context_read_hwp_unit16 (ctx, &pic->l_margin);
+    context_read_hwp_unit16 (ctx, &pic->r_margin);
+    context_read_hwp_unit16 (ctx, &pic->t_margin);
+    context_read_hwp_unit16 (ctx, &pic->b_margin);
+    context_read_int8 (ctx, &pic->brightness);
+    context_read_int8 (ctx, &pic->contrast);
+    context_read_uint8 (ctx, &pic->effect);
+    context_read_uint16 (ctx, &pic->binitem_id);
+    context_read_uint8 (ctx, &pic->border_trans);
+    context_read_uint32 (ctx, &pic->instance_id);
+}
+
+void ghwp_picture_set_gso (GHWPPicture *pic, GHWPGSO *gso)
+{
+    gso->picture = pic;
+
+    pic->gso = malloc (sizeof (*gso));
+    memcpy(pic->gso, gso, sizeof (*gso));
+}
+
+/** GHWPGSO *****************************************************************/
+
+G_DEFINE_TYPE (GHWPGSO, ghwp_gso, G_TYPE_OBJECT);
+
+GHWPGSO *ghwp_gso_new (void)
+{
+    return (GHWPGSO *) g_object_new (GHWP_TYPE_GSO, NULL);
+}
+
+static void ghwp_gso_finalize (GObject *obj)
+{
+    G_OBJECT_CLASS (ghwp_gso_parent_class)->finalize (obj);
+}
+
+static void ghwp_gso_class_init (GHWPGSOClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS (klass);
+    object_class->finalize     = ghwp_gso_finalize;
+}
+
+static void ghwp_gso_init (GHWPGSO *gso)
+{
+}
+
 /** GHWPParagraph ************************************************************/
 
 G_DEFINE_TYPE (GHWPParagraph, ghwp_paragraph, G_TYPE_OBJECT);
@@ -140,6 +244,7 @@ static void ghwp_paragraph_finalize (GObject *obj)
 
     _g_object_unref0 (paragraph->ghwp_text);
     _g_object_unref0 (paragraph->table);
+    _g_object_unref0 (paragraph->picture);
 
     g_array_unref (paragraph->char_shapes);
     g_array_unref (paragraph->range_tags);
@@ -157,6 +262,7 @@ static void ghwp_paragraph_init (GHWPParagraph *paragraph)
 {
     paragraph->ghwp_text = NULL;
     paragraph->table     = NULL;
+    paragraph->picture   = NULL;
 }
 
 void
@@ -213,6 +319,19 @@ GHWPTable *ghwp_paragraph_get_table (GHWPParagraph *paragraph)
 {
     g_return_val_if_fail (paragraph != NULL, NULL);
     return paragraph->table;
+}
+
+void ghwp_paragraph_set_picture (GHWPParagraph *paragraph, GHWPPicture *pic)
+{
+    g_return_if_fail (paragraph != NULL);
+    g_return_if_fail (pic       != NULL);
+    paragraph->picture = pic;
+}
+
+GHWPPicture *ghwp_paragraph_get_picture (GHWPParagraph *paragraph)
+{
+    g_return_val_if_fail (paragraph != NULL, NULL);
+    return paragraph->picture;
 }
 
 void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
