@@ -247,7 +247,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         while (ghwp_context_pull(context, error)) {
             curr_lv = (guint) context->level;
             /* 상태 변화 */
-            if (curr_lv <= ctrl_lv)
+            if (curr_lv < ctrl_lv)
                 context->status = STATE_NORMAL;
 
             switch (context->tag_id) {
@@ -384,6 +384,8 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     ...
                     list-header (21)
             */
+                ctrl_lv = context->level;
+                context->status = STATE_INSIDE_TABLE;
                 table = ghwp_table_new_from_context (context);
                 paragraph = g_array_index (page->paragraphs, GHWPParagraph *,
                                            page->paragraphs->len - 1);
