@@ -39,6 +39,14 @@ typedef guint32  ghwp_color;
 #define GHWP_COLOR_G(c)  (((c >>  8) & 0xff) / 256.0)
 #define GHWP_COLOR_B(c)  (((c >> 16) & 0xff) / 256.0)
 
+//#define GHWP_DEBUG  /* enable debug print */
+
+#ifdef GHWP_DEBUG
+# define dbg(...)  fprintf(stderr, __VA_ARGS__)
+#else
+# define dbg(...)
+#endif
+
 GQuark ghwp_error_quark (void);
 
 #define GHWP_ERROR ghwp_error_quark ()

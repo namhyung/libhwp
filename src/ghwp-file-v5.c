@@ -244,6 +244,9 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         while (ghwp_context_pull(context, error)) {
             GHWPContextStatus *curr_status = &context->status[context->level];
 
+            dbg ("%*stag = %u (size: %u)\n", context->level*3, "",
+                 context->tag_id, context->data_len);
+
             switch (context->tag_id) {
             case GHWP_TAG_PARA_HEADER:
                 paragraph = ghwp_paragraph_new ();
@@ -285,6 +288,10 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
             case GHWP_TAG_CTRL_HEADER:
                 context_read_uint32 (context, &ctrl_id);
+
+                dbg ("%*s ctrl: %c%c%c%c\n", context->level * 3, "",
+                     (ctrl_id >> 24) & 0xff, (ctrl_id >> 16) & 0xff,
+                     (ctrl_id >>  8) & 0xff, (ctrl_id >>  0) & 0xff);
 
                 switch (ctrl_id) {
                 case CTRL_ID_TABLE:
