@@ -360,8 +360,9 @@ static void ghwp_context_class_init (GHWPContextClass * klass)
 
 static void ghwp_context_init (GHWPContext * context)
 {
-    context->status = STATE_NORMAL;
-    context->priv   = GHWP_CONTEXT_GET_PRIVATE (context);
+    context->status[0].s = STATE_NORMAL;
+    context->status[0].p = NULL;
+    context->priv       = GHWP_CONTEXT_GET_PRIVATE (context);
 }
 
 

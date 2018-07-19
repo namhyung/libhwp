@@ -42,12 +42,21 @@ G_BEGIN_DECLS
 typedef enum
 {
     STATE_NORMAL,
-    STATE_INSIDE_TABLE,
-} GHWPParseState;
+    STATE_PARAGRAPH,
+    STATE_TABLE,
+} GHWPContextState;
+
+#define GHWP_MAX_STATE  1024
 
 typedef struct _GHWPContext        GHWPContext;
 typedef struct _GHWPContextClass   GHWPContextClass;
+typedef struct _GHWPContextStatus  GHWPContextStatus;
 typedef struct _GHWPContextPrivate GHWPContextPrivate;
+
+struct _GHWPContextStatus {
+  GHWPContextState  s;
+  void             *p;
+};
 
 struct _GHWPContext {
     GObject             parent_instance;
@@ -57,8 +66,8 @@ struct _GHWPContext {
     guint16             level;
     guint16             data_len;
     guint16             data_count;
-    guint8              status;
     guint8              version[4];
+    GHWPContextStatus   status[GHWP_MAX_STATE];
 };
 
 struct _GHWPContextClass {
