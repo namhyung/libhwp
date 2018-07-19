@@ -112,6 +112,11 @@ struct _GHWPParagraph
 
     GHWPText            *ghwp_text;
     GHWPTable           *table;
+
+    /* 문단이 다음 페이지로 이어지는 경우 */
+    GHWPParagraph       *link;
+    gint                 line_start;
+    gint                 line_end;
 };
 
 struct _GHWPParagraphClass
@@ -127,6 +132,9 @@ GHWPText      *ghwp_paragraph_get_ghwp_text     (GHWPParagraph *paragraph);
 GHWPTable     *ghwp_paragraph_get_table         (GHWPParagraph *paragraph);
 void           ghwp_paragraph_set_table         (GHWPParagraph *paragraph,
                                                  GHWPTable     *table);
+void           ghwp_paragraph_add_link          (GHWPParagraph *paragraph,
+                                                 GHWPParagraph *link,
+                                                 gint           line);
 void           ghwp_parse_paragraph_header      (GHWPParagraph *paragraph,
                                                  GHWPContext *ctx);
 void           ghwp_parse_paragraph_char_shape  (GHWPParagraph *paragraph,

@@ -395,6 +395,12 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 if (n != 0) {  /* 문단 내에서 페이지가 바뀌는 경우 */
                     if (page == NULL)
                         g_warning("invalid line seg?");
+
+                    GHWPParagraph *link_paragraph = ghwp_paragraph_new ();
+                    ghwp_paragraph_add_link (paragraph, link_paragraph, n);
+
+                    ghwp_page_add_paragraph (page, paragraph);
+                    paragraph = link_paragraph;
                 }
 
                 page = ghwp_page_new ();

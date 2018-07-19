@@ -30,6 +30,7 @@
 #include "ghwp-models.h"
 #include "ghwp-parse.h"
 
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define _g_free0(var) (var = (g_free (var), NULL))
 
 /** GHWPText *****************************************************************/
@@ -85,9 +86,13 @@ GHWPParagraph *ghwp_paragraph_new (void)
 static void ghwp_paragraph_finalize (GObject *obj)
 {
     GHWPParagraph *paragraph = GHWP_PARAGRAPH (obj);
-    g_array_free (paragraph->char_shapes, TRUE);
-    g_array_free (paragraph->range_tags, TRUE);
-    g_array_free (paragraph->line_segs, TRUE);
+
+    _g_object_unref0 (paragraph->ghwp_text);
+    _g_object_unref0 (paragraph->table);
+
+    g_array_unref (paragraph->char_shapes);
+    g_array_unref (paragraph->range_tags);
+    g_array_unref (paragraph->line_segs);
     G_OBJECT_CLASS (ghwp_paragraph_parent_class)->finalize (obj);
 }
 
@@ -99,9 +104,8 @@ static void ghwp_paragraph_class_init (GHWPParagraphClass *klass)
 
 static void ghwp_paragraph_init (GHWPParagraph *paragraph)
 {
-    paragraph->char_shapes = g_array_new (TRUE, TRUE, sizeof (GHWPCharShapeRef *));
-    paragraph->range_tags  = g_array_new (TRUE, TRUE, sizeof (GHWPRangeTag *));
-    paragraph->line_segs   = g_array_new (TRUE, TRUE, sizeof (GHWPLineSeg *));
+    paragraph->ghwp_text = NULL;
+    paragraph->table     = NULL;
 }
 
 void
@@ -123,6 +127,35 @@ void ghwp_paragraph_set_table (GHWPParagraph *paragraph, GHWPTable *table)
     g_return_if_fail (paragraph != NULL);
     g_return_if_fail (table     != NULL);
     paragraph->table = table;
+}
+
+void ghwp_paragraph_add_link (GHWPParagraph *paragraph,
+                              GHWPParagraph *link,
+                              gint line)
+{
+    g_return_if_fail (paragraph != NULL);
+    g_return_if_fail (link      != NULL);
+
+    memcpy (&link->header, &paragraph->header, sizeof (paragraph->header));
+
+    if (paragraph->ghwp_text)
+        link->ghwp_text = g_object_ref (paragraph->ghwp_text);
+    if (paragraph->table)
+        link->table = g_object_ref (paragraph->table);
+
+    link->char_shapes = g_array_ref (paragraph->char_shapes);
+    link->range_tags  = g_array_ref (paragraph->range_tags);
+    link->line_segs   = g_array_ref (paragraph->line_segs);
+
+    /* XXX only support a link between 2 pages */
+    paragraph->link = link;
+    link->link = paragraph;
+
+    paragraph->line_start = 0;
+    paragraph->line_end   = line;
+
+    link->line_start = line;
+    link->line_end   = link->header.n_line_segs;
 }
 
 GHWPTable *ghwp_paragraph_get_table (GHWPParagraph *paragraph)
@@ -149,6 +182,16 @@ void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
     if (context_check_version(ctx, 5, 0, 3, 2)) {
         context_read_uint16 (ctx, &paragraph->header.history_merge);
     }
+
+    paragraph->char_shapes = g_array_sized_new (TRUE, TRUE, sizeof (GHWPCharShapeRef *),
+                                                paragraph->header.n_char_shapes);
+    paragraph->range_tags  = g_array_sized_new (TRUE, TRUE, sizeof (GHWPRangeTag *),
+                                                paragraph->header.n_range_tags);
+    paragraph->line_segs   = g_array_sized_new (TRUE, TRUE, sizeof (GHWPLineSeg *),
+                                                paragraph->header.n_line_segs);
+
+    paragraph->line_start = 0;
+    paragraph->line_end = paragraph->header.n_line_segs;
 }
 
 void ghwp_parse_paragraph_char_shape (GHWPParagraph *paragraph,
@@ -164,7 +207,7 @@ void ghwp_parse_paragraph_char_shape (GHWPParagraph *paragraph,
         context_read_uint32 (ctx, &char_shape->pos);
         context_read_uint32 (ctx, &char_shape->id);
 
-        g_array_append_val (paragraph->char_shapes, char_shape);
+        g_array_insert_val (paragraph->char_shapes, i, char_shape);
     }
 }
 
@@ -188,7 +231,7 @@ void ghwp_parse_paragraph_line_seg (GHWPParagraph *paragraph,
         context_read_int32  (ctx, &line_seg->segment_width);
         context_read_uint32 (ctx, &line_seg->tag);
 
-        g_array_append_val (paragraph->line_segs, line_seg);
+        g_array_insert_val (paragraph->line_segs, i, line_seg);
     }
 }
 
@@ -206,7 +249,7 @@ void ghwp_parse_paragraph_range_tag (GHWPParagraph *paragraph,
         context_read_uint32 (ctx, &range_tag->end);
         context_read_uint32 (ctx, &range_tag->tag);
 
-        g_array_append_val (paragraph->range_tags, range_tag);
+        g_array_insert_val (paragraph->range_tags, i, range_tag);
     }
 }
 
