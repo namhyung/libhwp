@@ -30,8 +30,8 @@ void ghwp_page_get_size (GHWPPage *page,
 {
     g_return_if_fail (page != NULL);
 
-    *width  = page->section->page_info.h_size / GHWP_PPU;
-    *height = page->section->page_info.v_size / GHWP_PPU;
+    *width  = page->section->page_info.h_size / GHWP_UPP;
+    *height = page->section->page_info.v_size / GHWP_UPP;
 }
 
 void ghwp_page_set_section(GHWPPage    *page,
@@ -156,8 +156,8 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                     text_end = next_line->text_start;
                 }
 
-                draw_text_line(cr, scaled_font, (page_info->l_margin + line->col_offset) / GHWP_PPU,
-                               (page_info->t_margin + page_info->header + line->v_pos) / GHWP_PPU,
+                draw_text_line(cr, scaled_font, (page_info->l_margin + line->col_offset) / GHWP_UPP,
+                               (page_info->t_margin + page_info->header + line->v_pos) / GHWP_UPP,
                                ghwp_text->text, line->text_start, text_end);
             }
         }
@@ -202,8 +202,8 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                                 text_end = next_line->text_start;
                             }
 
-                            draw_text_line(cr, scaled_font, (x + line->col_offset + cell->left_margin) / GHWP_PPU,
-                                           (y + line->v_pos + cell->top_margin) / GHWP_PPU,
+                            draw_text_line(cr, scaled_font, (x + line->col_offset + cell->left_margin) / GHWP_UPP,
+                                           (y + line->v_pos + cell->top_margin) / GHWP_UPP,
                                            ghwp_text->text, line->text_start, text_end);
                         }
                     }
