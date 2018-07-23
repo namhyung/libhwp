@@ -169,6 +169,12 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
             x = page_info->l_margin;
             y = page_info->t_margin + page_info->header + line->v_pos;
 
+            cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
+            cairo_set_line_width (cr, 0.3);
+            cairo_rectangle (cr, x / GHWP_UPP, y / GHWP_UPP, table->obj.width / GHWP_UPP,
+                             table->obj.height / GHWP_UPP);
+            cairo_stroke (cr);
+
             guint l;
             guint cell_width = 0;
 
@@ -178,11 +184,16 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                 if (cell->col_addr == 0) {
                     x = page_info->l_margin;
 
-                    if (j != 0)
-                        y += cell->height / table->n_rows;
+                    if (j != 0)  /* FIXME */
+                        y += table->obj.height / table->n_rows;
                 } else {
                     x += cell_width;
                 }
+
+                cairo_set_line_width (cr, 0.2);
+                cairo_rectangle (cr, x / GHWP_UPP, y / GHWP_UPP, cell_width / GHWP_UPP,
+                                 (table->obj.height / table->n_rows) / GHWP_UPP);
+                cairo_stroke (cr);
 
                 for (k = 0; k < cell->paragraphs->len; k++) {
                     paragraph = g_array_index(cell->paragraphs,
@@ -202,8 +213,8 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                                 text_end = next_line->text_start;
                             }
 
-                            draw_text_line(cr, scaled_font, (x + line->col_offset + cell->l_margin) / GHWP_UPP,
-                                           (y + line->v_pos + cell->t_margin) / GHWP_UPP,
+                            draw_text_line(cr, scaled_font, (x + cell->l_margin) / GHWP_UPP,
+                                           (y + cell->t_margin + line->line_height) / GHWP_UPP,
                                            ghwp_text->text, line->text_start, text_end);
                         }
                     }
