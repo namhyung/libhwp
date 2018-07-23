@@ -226,6 +226,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         GHWPTableCell *cell = NULL;
         GHWPText      *ghwp_text;
         gchar         *text;
+        GHWPListHeader lhdr;
 
         section_stream = g_array_index (file->section_streams,
                                         GInputStream *,
@@ -325,6 +326,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 break;
 
             case GHWP_TAG_LIST_HEADER:
+                ghwp_parse_list_header (&lhdr, context);
                 /* TODO ctrl_id 에 따른 객체를 생성한다 */
                 switch (curr_status->s) {
                 /* table에 cell을 추가한다 */
@@ -335,6 +337,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     table = context->status[context->level - 1].p;
                     cell  = ghwp_table_cell_new ();
                     ghwp_parse_table_cell_attr (cell, context);
+                    memcpy (&cell->header, &lhdr, sizeof (lhdr));
                     /* FIXME 테이블 내에서 페이지가 나누어지는 경우 처리 */
                     ghwp_table_add_cell (table, cell);
                     curr_status->p = cell;

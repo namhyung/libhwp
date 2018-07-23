@@ -33,6 +33,7 @@
 
 G_BEGIN_DECLS
 
+/* for GHWPObject.attr */
 #define OBJ_ATTR_LIKE_TEXT              (1U << 0)
 #define OBJ_ATTR_RESERVED               (1U << 1)
 #define OBJ_ATTR_AFFECT_LINE            (1U << 2)
@@ -108,12 +109,39 @@ struct _GHWPObject {
     gchar       *desc;
 };
 
-typedef struct _GHWPText      GHWPText;
-typedef struct _GHWPTable     GHWPTable;
-typedef struct _GHWPTableCell GHWPTableCell;
-typedef struct _GHWPObject    GHWPObject;
+/* for GHWPListHeader.attr */
+#define LHDR_ATTR_TEXT_DIRECTION_MASK  (7U << 0)
+#define LHDR_ATTR_PARA_LINE_WRAP_MASK  (3U << 3)
+#define LHDR_ATTR_VERT_ALIGN_MASK      (3U << 5)
+
+/* use with LHDR_ATTR_TEXT_DIRECTION_MASK */
+#define LHDR_ATTR_TEXT_DIRECTION_H  (0U << 0)
+#define LHDR_ATTR_TEXT_DIRECTION_V  (1U << 0)
+
+/* use with LHDR_ATTR_PARA_LINE_WRAP_MASK */
+#define LHDR_ATTR_PARA_LINE_WRAP_NORMAL  (0U << 3)  /* 일반적인 줄바꿈 */
+#define LHDR_ATTR_PARA_LINE_WRAP_TEXT    (1U << 3)  /* 자간을 조종하여 한 줄을유지 */
+#define LHDR_ATTR_PARA_LINE_WRAP_WIDTH   (2U << 3)  /* 내용에 따라 폭이 늘어남 */
+
+/* use with LHDR_ATTR_VERT_ALIGN_MASK */
+#define LHDR_ATTR_VERT_ALIGN_TOP     (0U << 5)
+#define LHDR_ATTR_VERT_ALIGN_CENTER  (1U << 5)
+#define LHDR_ATTR_VERT_ALIGN_BOTTOM  (2U << 5)
+
+struct _GHWPListHeader {
+    gint16     n_paragraphs;
+    guint32    attr;
+    gint16     unknown;
+};
+
+typedef struct _GHWPText       GHWPText;
+typedef struct _GHWPTable      GHWPTable;
+typedef struct _GHWPTableCell  GHWPTableCell;
+typedef struct _GHWPObject     GHWPObject;
+typedef struct _GHWPListHeader GHWPListHeader;
 
 void ghwp_parse_common_object (GHWPObject *obj, GHWPContext *ctx);
+void ghwp_parse_list_header (GHWPListHeader *hdr, GHWPContext *ctx);
 
 /** GHWPParagraph ************************************************************/
 
@@ -312,11 +340,7 @@ typedef struct _GHWPTableCellClass GHWPTableCellClass;
 struct _GHWPTableCell
 {
     GObject parent_instance;
-
-    /* XXX ? */
-    guint16 n_paragraphs;
-    guint32 flags;
-    guint16 unknown;
+    GHWPListHeader header;
 
     guint16 col_addr;
     guint16 row_addr;

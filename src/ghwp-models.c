@@ -63,6 +63,15 @@ void ghwp_parse_common_object (GHWPObject *obj, GHWPContext *ctx)
     obj->desc = g_string_free (text, FALSE);
 }
 
+void ghwp_parse_list_header (GHWPListHeader *hdr, GHWPContext *ctx)
+{
+    g_return_if_fail (ctx != NULL);
+
+    context_read_int16 (ctx, &hdr->n_paragraphs);
+    context_read_uint32 (ctx, &hdr->attr);
+    context_read_int16 (ctx, &hdr->unknown);
+}
+
 /** GHWPText *****************************************************************/
 
 G_DEFINE_TYPE (GHWPText, ghwp_text, G_TYPE_OBJECT);
@@ -419,10 +428,6 @@ GHWPTableCell *ghwp_parse_table_cell_attr (GHWPTableCell *table_cell,
                                            GHWPContext *context)
 {
     g_return_val_if_fail (context != NULL, NULL);
-
-    context_read_uint16 (context, &table_cell->n_paragraphs);
-    context_read_uint32 (context, &table_cell->flags);
-    context_read_uint16 (context, &table_cell->unknown);
 
     /* 표 75 */
     context_read_uint16 (context, &table_cell->col_addr);
