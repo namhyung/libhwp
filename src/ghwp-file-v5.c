@@ -735,6 +735,57 @@ static GInputStream *_ghwp_make_stream_single (GHWPFileV5 *file, char *name,
     return gis;
 }
 
+static GArray *_ghwp_make_stream_array (GHWPFileV5 *file, char *name,
+                                        gboolean compress)
+{
+    GsfInfile *olefile = (GsfInfile*) file->priv->olefile;
+    GsfInfile *infile = (GsfInfile*) gsf_infile_child_by_name (olefile, name);
+    gint num_children;
+
+    infile = _g_object_ref0 (infile);
+    num_children = gsf_infile_num_children (infile);
+
+    if (num_children == 0) {
+        g_warning ("nothing in %s", name);
+        _g_object_unref0 (infile);
+        return NULL;
+    }
+
+    GArray *stream_array = g_array_new (TRUE, TRUE, sizeof (GInputStream*));
+    gint j;
+    for (j = 0; j < num_children; j++) {
+        GsfInput  *input = gsf_infile_child_by_index (infile, j);
+        GsfInfile *child = _g_object_ref0 (input);
+        gint num_grand_children = gsf_infile_num_children (child);
+        GInputStream *gis;
+
+        if (num_grand_children > 0) {
+            fprintf (stderr, "invalid child stream\n");
+            _g_object_unref0 (child);
+            continue;
+        }
+
+        gis = G_INPUT_STREAM (gsf_input_stream_new (input));
+
+        if (compress && file->is_compress) {
+            GZlibDecompressor *zd  = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_RAW);
+            GInputStream      *cis = g_converter_input_stream_new (gis, (GConverter*) zd);
+
+            _g_object_unref0 (zd);
+            _g_object_unref0 (gis);
+
+            gis = cis;
+        }
+
+        gis = _g_object_ref0 (gis);
+        g_array_append_val (stream_array, gis);
+        _g_object_unref0 (child);
+    } /* for */
+    _g_object_unref0 (infile);
+
+    return stream_array;
+}
+
 /* FIXME streams 배열과 enum을 이용하여 코드 재적성 바람 */
 static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
 {
@@ -761,8 +812,6 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
 
     for (i = 0; i < n_children; i++) {
         char     *entry = g_array_index (entries, char *, i);
-        GsfInput* input;
-        gint      num_children = 0;
 
         if (g_str_equal (entry, "FileHeader")) {
             _g_object_unref0 (file->file_header_stream);
@@ -773,58 +822,8 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
             file->doc_info_stream = _ghwp_make_stream_single (file, entry, TRUE);
         } else if (g_str_equal(entry, "BodyText") ||
                    g_str_equal(entry, "ViewText")) {
-            GsfInfile* infile;
-
             _g_array_free0 (file->section_streams);
-            file->section_streams = g_array_new (TRUE, TRUE,
-                                                 sizeof (GInputStream*));
-
-            infile = (GsfInfile*) gsf_infile_child_by_name (
-                                         (GsfInfile*) file->priv->olefile, entry);
-            infile = _g_object_ref0 (infile);
-
-            num_children = gsf_infile_num_children (infile);
-
-            if (num_children == 0) {
-                fprintf (stderr, "nothing in %s\n", entry);
-            }
-
-            gint j;
-            for (j = 0; j < num_children; j++) {
-                input = gsf_infile_child_by_index (infile, j);
-                GsfInfile *section = _g_object_ref0 (input);
-                gint num_section_children = gsf_infile_num_children (section);
-
-                if (num_section_children > 0) {
-                    fprintf (stderr, "invalid section\n");
-                }
-
-                if (file->is_compress) {
-                    GsfInputStream* gis;
-                    GZlibDecompressor* zd;
-                    GConverterInputStream* cis;
-
-                    gis = gsf_input_stream_new ((GsfInput*) section);
-                    zd = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_RAW);
-                    cis = (GConverterInputStream*) g_converter_input_stream_new ((GInputStream*) gis, (GConverter*) zd);
-
-                    _g_object_unref0 (file->priv->section_stream);
-                    file->priv->section_stream = G_INPUT_STREAM (cis);
-                    _g_object_unref0 (zd);
-                    _g_object_unref0 (gis);
-                } else {
-                    GsfInputStream* stream;
-                    stream = gsf_input_stream_new ((GsfInput*) section);
-                    _g_object_unref0 (file->priv->section_stream);
-                    file->priv->section_stream = G_INPUT_STREAM (stream);
-                }
-
-                GInputStream *_stream_ = file->priv->section_stream;
-                _stream_ = _g_object_ref0 (_stream_);
-                g_array_append_val (file->section_streams, _stream_);
-                _g_object_unref0 (section);
-            } /* for */
-            _g_object_unref0 (infile);
+            file->section_streams = _ghwp_make_stream_array (file, entry, TRUE);
         } else if (g_str_equal (entry, "\005HwpSummaryInformation")) {
             _g_object_unref0 (file->summary_info_stream);
             file->summary_info_stream = _ghwp_make_stream_single (file, entry, FALSE);
