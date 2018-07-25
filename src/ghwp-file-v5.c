@@ -76,6 +76,9 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
         case GHWP_TAG_DOCUMENT_PROPERTIES:
             ghwp_parse_document_property (doc, context);
             break;
+        case GHWP_TAG_ID_MAPPINGS:
+            ghwp_parse_document_id_mapping (doc, context);
+            break;
         default:
             dbg("%s:%d: %s not implemented\n", __FILE__, __LINE__,
                 _ghwp_get_tag_name (context->tag_id));

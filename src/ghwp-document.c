@@ -340,3 +340,25 @@ void ghwp_parse_document_property (GHWPDocument *doc,
     context_read_uint32 (ctx, &prop->char_unit_pos);
 }
 
+void ghwp_parse_document_id_mapping (GHWPDocument *doc,
+                                     GHWPContext  *ctx)
+{
+    GHWPDocumentIDMap *id_maps;
+    gint    n_mappings = 15;
+    int     i;
+
+    g_return_if_fail (GHWP_IS_DOCUMENT (doc));
+    g_return_if_fail (GHWP_IS_CONTEXT (ctx));
+
+    id_maps = &doc->info_v5.id_maps;
+
+    if (context_check_version (ctx, 5, 0, 2, 1))
+        n_mappings++;
+    if (context_check_version (ctx, 5, 0, 3, 2))
+        n_mappings += 2;
+
+    for (i = 0; i < n_mappings; i++) {
+        context_read_uint32 (ctx, &id_maps->num[i]);
+    }
+}
+

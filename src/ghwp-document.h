@@ -39,6 +39,7 @@ typedef struct _GHWPDocument           GHWPDocument;
 typedef struct _GHWPDocumentClass      GHWPDocumentClass;
 typedef struct _GHWPDocumentPrivate    GHWPDocumentPrivate;
 typedef struct _GHWPDocumentProperty   GHWPDocumentProperty;
+typedef struct _GHWPDocumentIDMap      GHWPDocumentIDMap;
 
 struct _GHWPDocumentProperty {
     guint16  n_sections;
@@ -53,6 +54,33 @@ struct _GHWPDocumentProperty {
     guint32  char_unit_pos;
 };
 
+typedef enum {
+    ID_BINARY_DATA      = 0,
+    ID_KOREAN_FONTS     = 1,
+    ID_ENGLISH_FONTS    = 2,
+    ID_HANJA_FONTS      = 3,
+    ID_JAPANESE_FONTS   = 4,
+    ID_OTHERS_FONTS     = 5,
+    ID_SYMBOL_FONTS     = 6,
+    ID_USER_FONTS       = 7,
+    ID_BORDER_FILLS     = 8,
+    ID_CHAR_SHAPES      = 9,
+    ID_TAB_DEFS         = 10,
+    ID_PARA_NUMBERINGS  = 11,
+    ID_BULLETS          = 12,
+    ID_PARA_SHAPES      = 13,
+    ID_STYLES           = 14,
+    ID_MEMO_SHAPES      = 15,  /* v5.0.2.1 */
+    ID_HISTORY          = 16,  /* v5.0.3.2 */
+    ID_HISTORY_USER     = 17,  /* v5.0.3.2 */
+
+    MAX_ID_MAPPINGS,
+} IDMappingsID;
+
+struct _GHWPDocumentIDMap {
+    guint32 num[MAX_ID_MAPPINGS];
+};
+
 struct _GHWPDocument {
     GObject              parent_instance;
     GHWPDocumentPrivate *priv;
@@ -65,6 +93,7 @@ struct _GHWPDocument {
 
     struct {
         GHWPDocumentProperty  prop;
+        GHWPDocumentIDMap     id_maps;
     } info_v5;
 
     /* ev info */
@@ -121,6 +150,8 @@ void      ghwp_document_get_hwp_version        (GHWPDocument *document,
                                                 guint8       *extra_version);
 
 void      ghwp_parse_document_property         (GHWPDocument *document,
+                                                GHWPContext  *context);
+void      ghwp_parse_document_id_mapping       (GHWPDocument *document,
                                                 GHWPContext  *context);
 G_END_DECLS
 
