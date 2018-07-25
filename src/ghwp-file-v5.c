@@ -702,6 +702,39 @@ static gint compare_entries (gconstpointer a, gconstpointer b)
     return i - j;
 }
 
+static GInputStream *_ghwp_make_stream_single (GHWPFileV5 *file, char *name,
+                                               gboolean compress)
+{
+    GsfInput *input   = gsf_infile_child_by_name ((GsfInfile*) file->priv->olefile,
+                                                  name);
+    GInputStream *gis;
+    gint num_children;
+
+    input = _g_object_ref0 (input);
+    num_children = gsf_infile_num_children ((GsfInfile*) input);
+
+    if (num_children > 0) {
+        g_warning ("invalid input stream");
+        _g_object_unref0 (input);
+        return NULL;
+    }
+
+    gis = G_INPUT_STREAM (gsf_input_stream_new (input));
+
+    if (compress && file->is_compress) {
+        GZlibDecompressor *zd  = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_RAW);
+        GInputStream      *cis = g_converter_input_stream_new (gis, (GConverter*) zd);
+
+        _g_object_unref0 (zd);
+        _g_object_unref0 (gis);
+
+        gis = cis;
+    }
+
+    _g_object_unref0 (input);
+    return gis;
+}
+
 /* FIXME streams 배열과 enum을 이용하여 코드 재적성 바람 */
 static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
 {
@@ -732,45 +765,12 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
         gint      num_children = 0;
 
         if (g_str_equal (entry, "FileHeader")) {
-            input = gsf_infile_child_by_name ((GsfInfile*) file->priv->olefile,
-                                              entry);
-            num_children = gsf_infile_num_children ((GsfInfile*) input);
-
-            if (num_children > 0) {
-                fprintf (stderr, "invalid\n");
-            }
-
-            file->file_header_stream = G_INPUT_STREAM (gsf_input_stream_new (input));
+            _g_object_unref0 (file->file_header_stream);
+            file->file_header_stream = _ghwp_make_stream_single (file, entry, FALSE);
             ghwp_file_v5_decode_file_header (file);
         } else if (g_str_equal (entry, "DocInfo")) {
-            input = gsf_infile_child_by_name ((GsfInfile*) file->priv->olefile,
-                                              entry);
-            input = _g_object_ref0 (input);
-            num_children = gsf_infile_num_children ((GsfInfile*) input);
-
-            if (num_children > 0) {
-                fprintf (stderr, "invalid\n");
-            }
-
-            if (file->is_compress) {
-                GsfInputStream    *gis;
-                GZlibDecompressor *zd;
-                GInputStream      *cis;
-
-                gis = gsf_input_stream_new (input);
-                zd  = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_RAW);
-                cis = g_converter_input_stream_new ((GInputStream*) gis,
-                                                    (GConverter*) zd);
-                _g_object_unref0 (file->doc_info_stream);
-                file->doc_info_stream = cis;
-
-                _g_object_unref0 (zd);
-                _g_object_unref0 (gis);
-            } else {
-                _g_object_unref0 (file->doc_info_stream);
-                file->doc_info_stream = (GInputStream*) gsf_input_stream_new (input);
-            }
-            _g_object_unref0 (input);
+            _g_object_unref0 (file->doc_info_stream);
+            file->doc_info_stream = _ghwp_make_stream_single (file, entry, TRUE);
         } else if (g_str_equal(entry, "BodyText") ||
                    g_str_equal(entry, "ViewText")) {
             GsfInfile* infile;
@@ -826,44 +826,14 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
             } /* for */
             _g_object_unref0 (infile);
         } else if (g_str_equal (entry, "\005HwpSummaryInformation")) {
-            input = gsf_infile_child_by_name ((GsfInfile*) file->priv->olefile,
-                                              entry);
-            input = _g_object_ref0 (input);
-            num_children = gsf_infile_num_children ((GsfInfile*) input);
-
-            if (num_children > 0) {
-                fprintf (stderr, "invalid\n");
-            }
-
             _g_object_unref0 (file->summary_info_stream);
-            file->summary_info_stream = (GInputStream*) gsf_input_stream_new (input);
-            _g_object_unref0 (input);
+            file->summary_info_stream = _ghwp_make_stream_single (file, entry, FALSE);
         } else if (g_str_equal (entry, "PrvText")) {
-            input = gsf_infile_child_by_name ((GsfInfile*) file->priv->olefile,
-                                              entry);
-            input = _g_object_ref0 (input);
-            num_children = gsf_infile_num_children ((GsfInfile*) input);
-
-            if (num_children > 0) {
-                fprintf (stderr, "invalid\n");
-            }
-
             _g_object_unref0 (file->prv_text_stream);
-            file->prv_text_stream = (GInputStream *) gsf_input_stream_new (input);
-            _g_object_unref0 (input);
+            file->prv_text_stream = _ghwp_make_stream_single (file, entry, FALSE);
         } else if (g_str_equal (entry, "PrvImage")) {
-            input = gsf_infile_child_by_name ((GsfInfile*) file->priv->olefile,
-                                              entry);
-            input = _g_object_ref0 (input);
-            num_children = gsf_infile_num_children ((GsfInfile*) input);
-
-            if (num_children > 0) {
-                fprintf (stderr, "invalid\n");
-            }
-
             _g_object_unref0 (file->prv_image_stream);
-            file->prv_image_stream = (GInputStream*) gsf_input_stream_new (input);
-            _g_object_unref0 (input);
+            file->prv_image_stream = _ghwp_make_stream_single (file, entry, FALSE);
         } else {
             g_warning("%s:%d: %s not implemented\n", __FILE__, __LINE__, entry);
         } /* if */
