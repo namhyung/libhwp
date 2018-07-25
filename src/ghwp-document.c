@@ -29,6 +29,7 @@
 
 #include "config.h"
 #include "ghwp-document.h"
+#include "ghwp-parse.h"
 
 G_DEFINE_TYPE (GHWPDocument, ghwp_document, G_TYPE_OBJECT);
 
@@ -316,3 +317,26 @@ ghwp_document_get_hwp_version (GHWPDocument *document,
                                micro_version,
                                extra_version);
 }
+
+void ghwp_parse_document_property (GHWPDocument *doc,
+                                   GHWPContext  *ctx)
+{
+    GHWPDocumentProperty *prop;
+
+    g_return_if_fail (GHWP_IS_DOCUMENT (doc));
+    g_return_if_fail (GHWP_IS_CONTEXT (ctx));
+
+    prop = &doc->info_v5.prop;
+
+    context_read_uint16 (ctx, &prop->n_sections);
+    context_read_uint16 (ctx, &prop->start_page_num);
+    context_read_uint16 (ctx, &prop->start_footnote_num);
+    context_read_uint16 (ctx, &prop->start_endnote_num);
+    context_read_uint16 (ctx, &prop->start_picture_num);
+    context_read_uint16 (ctx, &prop->start_table_num);
+    context_read_uint16 (ctx, &prop->start_math_num);
+    context_read_uint32 (ctx, &prop->list_id);
+    context_read_uint32 (ctx, &prop->paragraph_id);
+    context_read_uint32 (ctx, &prop->char_unit_pos);
+}
+

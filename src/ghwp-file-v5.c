@@ -41,6 +41,7 @@
 #include <gsf/gsf-timestamp.h>
 
 #include "gsf-input-stream.h"
+#include "ghwp-document.h"
 #include "ghwp-file-v5.h"
 #include "ghwp-parse.h"
 #include "config.h"
@@ -57,65 +58,32 @@ static gpointer _g_object_ref0 (gpointer obj)
     return obj ? g_object_ref (obj) : NULL;
 }
 
-/*typedef enum {*/
-/*    ID_BINARY_DATA      = 0,*/
-/*    ID_KOREAN_FONTS     = 1,*/
-/*    ID_ENGLISH_FONTS    = 2,*/
-/*    ID_HANJA_FONTS      = 3,*/
-/*    ID_JAPANESE_FONTS   = 4,*/
-/*    ID_OTHERS_FONTS     = 5,*/
-/*    ID_SYMBOL_FONTS     = 6,*/
-/*    ID_USER_FONTS       = 7,*/
-/*    ID_BORDER_FILLS     = 8,*/
-/*    ID_CHAR_SHAPES      = 9,*/
-/*    ID_TAB_DEFS         = 10,*/
-/*    ID_PARA_NUMBERINGS  = 11,*/
-/*    ID_BULLETS          = 12,*/
-/*    ID_PARA_SHAPES      = 13,*/
-/*    ID_STYLES           = 14,*/
-    /*
-     * 메모 모양(MemoShape)는 한/글2007부터 추가되었다.
-     * 한/글2007 이전 문서는 data_len <= 60,
-     * v5.0.0.6 : ID_MAPPINGS data_len: 60
-     * v5.0.1.7 : ID_MAPPINGS data_len: 64
-     * v5.0.2.4 : ID_MAPPINGS data_len: 64
-     */
-/*    ID_MEMO_SHAPES      = 15,*/
-    /* 한/글2010 에서 추가된 것으로 추정됨 */
-    /* v5.0.3.4 : ID_MAPPINGS data_len: 72 */
-/*    ID_KNOWN_16         = 16,*/
-/*    ID_KNOWN_17         = 17,*/
-/*} IDMappingsID;*/
-
 static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
 {
     g_return_if_fail (doc != NULL);
 
-/*    guint32 id_mappings[16] = {0}; */ /* 반드시 초기화 해야 한다. */
-/*    int i;*/
-
-/*    GInputStream *stream  = doc->file->doc_info_stream;
+    GHWPFileV5   *file    = GHWP_FILE_V5(doc->file);
+    GInputStream *stream  = file->doc_info_stream;
     GHWPContext  *context = ghwp_context_new (stream);
+
+    context->version[0] = file->major_version;
+    context->version[1] = file->minor_version;
+    context->version[2] = file->micro_version;
+    context->version[3] = file->extra_version;
+
     while (ghwp_context_pull (context, error)) {
         switch (context->tag_id) {
-        case GHWP_TAG_DOCUMENT_PROPERTIES:*/
-            /* TODO */
-/*            break;
-        case GHWP_TAG_ID_MAPPINGS:*/
-/*            for (i = 0; i < sizeof(id_mappings); i = i + sizeof(guint32)) {*/
-/*                memcpy(&id_mappings[i], &(context->data[i]), sizeof(guint32));*/
-/*                id_mappings[i] = GUINT16_FROM_LE(id_mappings[i]);*/
-/*                printf("%d\n", id_mappings[i]);*/
-/*            }*/
-/*            break;
+        case GHWP_TAG_DOCUMENT_PROPERTIES:
+            ghwp_parse_document_property (doc, context);
+            break;
         default:
-            printf("%s:%d: %s not implemented\n", __FILE__, __LINE__,
+            dbg("%s:%d: %s not implemented\n", __FILE__, __LINE__,
                 _ghwp_get_tag_name (context->tag_id));
             break;
         }
     }
 
-    g_object_unref (context);*/
+    g_object_unref (context);
 }
 
 static gchar *_ghwp_file_get_text_from_context (GHWPContext *context)

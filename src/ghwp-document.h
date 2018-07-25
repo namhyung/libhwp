@@ -35,9 +35,23 @@ G_BEGIN_DECLS
 #define GHWP_IS_DOCUMENT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GHWP_TYPE_DOCUMENT))
 #define GHWP_DOCUMENT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GHWP_TYPE_DOCUMENT, GHWPDocumentClass))
 
-typedef struct _GHWPDocument        GHWPDocument;
-typedef struct _GHWPDocumentClass   GHWPDocumentClass;
-typedef struct _GHWPDocumentPrivate GHWPDocumentPrivate;
+typedef struct _GHWPDocument           GHWPDocument;
+typedef struct _GHWPDocumentClass      GHWPDocumentClass;
+typedef struct _GHWPDocumentPrivate    GHWPDocumentPrivate;
+typedef struct _GHWPDocumentProperty   GHWPDocumentProperty;
+
+struct _GHWPDocumentProperty {
+    guint16  n_sections;
+    guint16  start_page_num;
+    guint16  start_footnote_num;  // 각주 시작 번호
+    guint16  start_endnote_num;   // 미주 시작 번호
+    guint16  start_picture_num;
+    guint16  start_table_num;
+    guint16  start_math_num;
+    guint32  list_id;
+    guint32  paragraph_id;
+    guint32  char_unit_pos;
+};
 
 struct _GHWPDocument {
     GObject              parent_instance;
@@ -48,6 +62,11 @@ struct _GHWPDocument {
     GArray              *pages;
     GArray              *sections;
     GsfDocMetaData      *summary_info;
+
+    struct {
+        GHWPDocumentProperty  prop;
+    } info_v5;
+
     /* ev info */
     const gchar         *title;
     gchar               *format;
@@ -101,6 +120,8 @@ void      ghwp_document_get_hwp_version        (GHWPDocument *document,
                                                 guint8       *micro_version,
                                                 guint8       *extra_version);
 
+void      ghwp_parse_document_property         (GHWPDocument *document,
+                                                GHWPContext  *context);
 G_END_DECLS
 
 #endif /* __GHWP_DOCUMENT_H__ */
