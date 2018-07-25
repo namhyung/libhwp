@@ -360,5 +360,31 @@ void ghwp_parse_document_id_mapping (GHWPDocument *doc,
     for (i = 0; i < n_mappings; i++) {
         context_read_uint32 (ctx, &id_maps->num[i]);
     }
+
+    doc->info_v5.bin_items = g_malloc0_n (id_maps->num[ID_BINARY_DATA],
+                                          sizeof (*doc->info_v5.bin_items));
 }
 
+void ghwp_parse_document_bin_data (GHWPDocument *doc,
+                                   GHWPContext  *ctx,
+                                   gint          idx)
+{
+    GHWPBinDataItem *item;
+
+    g_return_if_fail (GHWP_IS_DOCUMENT (doc));
+    g_return_if_fail (GHWP_IS_CONTEXT (ctx));
+
+    item = &doc->info_v5.bin_items[idx];
+    context_read_uint16 (ctx, &item->attr);
+
+    if ((item->attr & BINDATA_ATTR_TYPE_MASK) == BINDATA_ATTR_TYPE_LINK) {
+        item->link_abs_path = context_read_string (ctx);
+        item->link_rel_path = context_read_string (ctx);
+    } else {
+        context_read_uint16 (ctx, &item->bindata_id);
+    }
+
+    if ((item->attr & BINDATA_ATTR_TYPE_MASK) == BINDATA_ATTR_TYPE_EMBED) {
+        item->ext = context_read_string (ctx);
+    }
+}

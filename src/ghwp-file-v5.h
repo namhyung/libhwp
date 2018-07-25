@@ -52,6 +52,7 @@ struct _GHWPFileV5
     GHWPFileV5Private *priv;
 
     GArray            *section_streams;
+    GArray            *bindata_streams;
     GInputStream      *prv_text_stream;
     GInputStream      *prv_image_stream;
     GInputStream      *file_header_stream;

@@ -40,6 +40,7 @@ typedef struct _GHWPDocumentClass      GHWPDocumentClass;
 typedef struct _GHWPDocumentPrivate    GHWPDocumentPrivate;
 typedef struct _GHWPDocumentProperty   GHWPDocumentProperty;
 typedef struct _GHWPDocumentIDMap      GHWPDocumentIDMap;
+typedef struct _GHWPBinDataItem        GHWPBinDataItem;
 
 struct _GHWPDocumentProperty {
     guint16  n_sections;
@@ -81,6 +82,34 @@ struct _GHWPDocumentIDMap {
     guint32 num[MAX_ID_MAPPINGS];
 };
 
+#define BINDATA_ATTR_TYPE_MASK      (0xf << 0)
+#define BINDATA_ATTR_COMPRESS_MASK  (0xf << 4)
+#define BINDATA_ATTR_ACCESS_MASK    (0xf << 8)
+
+/* use with BINDATA_ATTR_TYPE_MASK */
+#define BINDATA_ATTR_TYPE_LINK   (0U << 0)
+#define BINDATA_ATTR_TYPE_EMBED  (1U << 0)
+#define BINDATA_ATTR_TYPE_STORE  (2U << 0)
+
+/* use with BINDATA_ATTR_COMPRESS_MASK */
+#define BINDATA_ATTR_COMPRESS_FOLLOW   (0U << 4)
+#define BINDATA_ATTR_COMPRESS_YES      (1U << 4)
+#define BINDATA_ATTR_COMPRESS_NO       (2U << 4)
+
+/* use with BINDATA_ATTR_ACCESS_MASK */
+#define BINDATA_ATTR_ACCESS_NONE     (0U << 8)
+#define BINDATA_ATTR_ACCESS_SUCCESS  (1U << 8)
+#define BINDATA_ATTR_ACCESS_FAILED   (2U << 8)
+#define BINDATA_ATTR_ACCESS_IGNORED  (3U << 8)
+
+struct _GHWPBinDataItem {
+    guint16  attr;
+    gchar   *link_abs_path;
+    gchar   *link_rel_path;
+    guint16  bindata_id;
+    gchar   *ext;
+};
+
 struct _GHWPDocument {
     GObject              parent_instance;
     GHWPDocumentPrivate *priv;
@@ -94,6 +123,7 @@ struct _GHWPDocument {
     struct {
         GHWPDocumentProperty  prop;
         GHWPDocumentIDMap     id_maps;
+        GHWPBinDataItem      *bin_items;
     } info_v5;
 
     /* ev info */
@@ -153,6 +183,9 @@ void      ghwp_parse_document_property         (GHWPDocument *document,
                                                 GHWPContext  *context);
 void      ghwp_parse_document_id_mapping       (GHWPDocument *document,
                                                 GHWPContext  *context);
+void      ghwp_parse_document_bin_data         (GHWPDocument *document,
+                                                GHWPContext  *context,
+                                                gint          idx);
 G_END_DECLS
 
 #endif /* __GHWP_DOCUMENT_H__ */

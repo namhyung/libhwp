@@ -65,6 +65,7 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
     GHWPFileV5   *file    = GHWP_FILE_V5(doc->file);
     GInputStream *stream  = file->doc_info_stream;
     GHWPContext  *context = ghwp_context_new (stream);
+    gint          n_bindata = 0;
 
     context->version[0] = file->major_version;
     context->version[1] = file->minor_version;
@@ -78,6 +79,9 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
             break;
         case GHWP_TAG_ID_MAPPINGS:
             ghwp_parse_document_id_mapping (doc, context);
+            break;
+        case GHWP_TAG_BIN_DATA:
+            ghwp_parse_document_bin_data (doc, context, n_bindata++);
             break;
         default:
             dbg("%s:%d: %s not implemented\n", __FILE__, __LINE__,
@@ -827,6 +831,9 @@ static void _ghwp_file_v5_make_stream (GHWPFileV5 *file)
         } else if (g_str_equal (entry, "\005HwpSummaryInformation")) {
             _g_object_unref0 (file->summary_info_stream);
             file->summary_info_stream = _ghwp_make_stream_single (file, entry, FALSE);
+        } else if (g_str_equal(entry, "BinData")) {
+            _g_array_free0 (file->bindata_streams);
+            file->bindata_streams = _ghwp_make_stream_array (file, entry, TRUE);
         } else if (g_str_equal (entry, "PrvText")) {
             _g_object_unref0 (file->prv_text_stream);
             file->prv_text_stream = _ghwp_make_stream_single (file, entry, FALSE);
