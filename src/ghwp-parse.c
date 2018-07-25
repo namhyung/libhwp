@@ -245,6 +245,32 @@ gboolean context_read_hwp_color (GHWPContext *context, ghwp_color *i)
     return TRUE;
 }
 
+gchar *context_read_string_n (GHWPContext *context, guint n)
+{
+    gunichar2 ch;
+    GString  *text;
+    guint     i;
+
+    g_return_val_if_fail (context != NULL, NULL);
+
+    text = g_string_new("");
+
+    for (i = 0; i < n; i++) {
+        context_read_uint16 (context, &ch);
+	g_string_append_unichar(text, ch);
+    }
+
+    return g_string_free(text, FALSE);
+}
+
+gchar *context_read_string (GHWPContext *context)
+{
+    guint16 len;
+
+    context_read_uint16 (context, &len);
+    return context_read_string_n (context, len);
+}
+
 gboolean context_check_version (GHWPContext  *context,
 				guint8        major,
 				guint8        minor,

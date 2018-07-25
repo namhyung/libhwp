@@ -105,6 +105,9 @@ gboolean     context_read_hwp_color  (GHWPContext  *context,
                                       ghwp_color   *i);
 gboolean     context_skip            (GHWPContext  *context,
                                       guint16       count);
+gchar       *context_read_string_n   (GHWPContext *context,
+				      guint n);
+gchar       *context_read_string     (GHWPContext *context);
 gboolean     context_check_version   (GHWPContext  *context,
 				      guint8        major,
 				      guint8        minor,
