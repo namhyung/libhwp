@@ -67,6 +67,7 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
     GHWPContext  *context = ghwp_context_new (stream);
     gint          n_bindata = 0;
     gint          n_fonts = 0;
+    gint          n_char_shapes = 0;
 
     context->version[0] = file->major_version;
     context->version[1] = file->minor_version;
@@ -86,6 +87,9 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
             break;
         case GHWP_TAG_FACE_NAME:
             ghwp_parse_document_font_face (doc, context, n_fonts++);
+            break;
+        case GHWP_TAG_CHAR_SHAPE:
+            ghwp_parse_document_char_shape (doc, context, n_char_shapes++);
             break;
         default:
             dbg("%s:%d: %s not implemented\n", __FILE__, __LINE__,

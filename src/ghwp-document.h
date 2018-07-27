@@ -43,6 +43,7 @@ typedef struct _GHWPDocumentIDMap      GHWPDocumentIDMap;
 typedef struct _GHWPBinDataItem        GHWPBinDataItem;
 typedef struct _GHWPFontType           GHWPFontType;
 typedef struct _GHWPFontFace           GHWPFontFace;
+typedef struct _GHWPCharShape          GHWPCharShape;
 
 struct _GHWPDocumentProperty {
     guint16  n_sections;
@@ -142,6 +143,40 @@ struct _GHWPFontFace {
     gchar        *def_name;
 };
 
+#define CHAR_SHAPE_LANG_KO  0  /* 한국어 */
+#define CHAR_SHAPE_LANG_EN  1  /* 영어 */
+#define CHAR_SHAPE_LANG_ZH  2  /* 중국어 */
+#define CHAR_SHAPE_LANG_JA  3  /* 일본어 */
+#define CHAR_SHAPE_LANG_OT  4  /* 기타 */
+#define CHAR_SHAPE_LANG_SN  5  /* 기호 */
+#define CHAR_SHAPE_LANG_US  6  /* 사용자 */
+#define CHAR_SHAPE_LANG_NUM 7
+
+/* TODO: 글자 모양 속성 전체 지원 */
+#define CHAR_SHAPE_ATTR_ITALIC       (1U << 0)
+#define CHAR_SHAPE_ATTR_BOLD         (1U << 1)
+#define CHAR_SHAPE_ATTR_UNDERLINE    (1U << 2)
+#define CHAR_SHAPE_ATTR_SUPERSCRIPT  (1U << 15)
+#define CHAR_SHAPE_ATTR_SUBSCRIPT    (1U << 16)
+
+struct _GHWPCharShape {
+    guint16     face_id[CHAR_SHAPE_LANG_NUM];
+    guint8      width[CHAR_SHAPE_LANG_NUM];
+    guint8      space[CHAR_SHAPE_LANG_NUM];
+    guint8      rel_size[CHAR_SHAPE_LANG_NUM];
+    guint8      rel_pos[CHAR_SHAPE_LANG_NUM];
+    gint32      def_size;
+    guint32     attr;
+    gint8       shadow_size1;
+    gint8       shadow_size2;
+    ghwp_color  char_color;
+    ghwp_color  line_color;
+    ghwp_color  shade_color;
+    ghwp_color  shadow_color;
+    guint16     border_fill_id;  /* v5.0.2.1 */
+    ghwp_color  midline_color;   /* v5.0.3.0 */
+};
+
 struct _GHWPDocument {
     GObject              parent_instance;
     GHWPDocumentPrivate *priv;
@@ -163,6 +198,7 @@ struct _GHWPDocument {
         GHWPFontFace         *fonts_others;
         GHWPFontFace         *fonts_symbol;
         GHWPFontFace         *fonts_user;
+        GHWPCharShape        *char_shapes;
     } info_v5;
 
     /* ev info */
@@ -226,6 +262,9 @@ void      ghwp_parse_document_bin_data         (GHWPDocument *document,
                                                 GHWPContext  *context,
                                                 gint          idx);
 void      ghwp_parse_document_font_face        (GHWPDocument *doc,
+                                                GHWPContext  *ctx,
+                                                gint          idx);
+void      ghwp_parse_document_char_shape       (GHWPDocument *doc,
                                                 GHWPContext  *ctx,
                                                 gint          idx);
 G_END_DECLS

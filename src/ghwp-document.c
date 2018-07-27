@@ -378,6 +378,10 @@ void ghwp_parse_document_id_mapping (GHWPDocument *doc,
     doc->info_v5.fonts_others   = doc->info_v5.fonts_japanese + id_maps->num[ID_JAPANESE_FONTS];
     doc->info_v5.fonts_symbol   = doc->info_v5.fonts_others + id_maps->num[ID_OTHERS_FONTS];
     doc->info_v5.fonts_user     = doc->info_v5.fonts_symbol + id_maps->num[ID_SYMBOL_FONTS];
+
+    doc->info_v5.char_shapes = g_malloc0_n (id_maps->num[ID_CHAR_SHAPES],
+                                            sizeof (*doc->info_v5.char_shapes));
+
 }
 
 void ghwp_parse_document_bin_data (GHWPDocument *doc,
@@ -451,4 +455,43 @@ void ghwp_parse_document_font_face (GHWPDocument *doc,
     if (font->attr & FONT_FACE_ATTR_DEF_FONT) {
         font->def_name = context_read_string (ctx);
     }
+}
+
+void ghwp_parse_document_char_shape (GHWPDocument *doc,
+                                     GHWPContext  *ctx,
+                                     gint          idx)
+{
+    GHWPCharShape *char_shape;
+    gint i;
+
+    g_return_if_fail (GHWP_IS_DOCUMENT (doc));
+    g_return_if_fail (GHWP_IS_CONTEXT (ctx));
+    g_return_if_fail (idx < doc->info_v5.id_maps.num[ID_CHAR_SHAPES]);
+
+    char_shape = &doc->info_v5.char_shapes[idx];
+
+    for(i = 0; i < CHAR_SHAPE_LANG_NUM; i++)
+        context_read_uint16 (ctx, &char_shape->face_id[i]);
+    for(i = 0; i < CHAR_SHAPE_LANG_NUM; i++)
+        context_read_uint8 (ctx, &char_shape->width[i]);
+    for(i = 0; i < CHAR_SHAPE_LANG_NUM; i++)
+        context_read_uint8 (ctx, &char_shape->space[i]);
+    for(i = 0; i < CHAR_SHAPE_LANG_NUM; i++)
+        context_read_uint8 (ctx, &char_shape->rel_size[i]);
+    for(i = 0; i < CHAR_SHAPE_LANG_NUM; i++)
+        context_read_uint8 (ctx, &char_shape->rel_pos[i]);
+
+    context_read_int32 (ctx, &char_shape->def_size);
+    context_read_uint32 (ctx, &char_shape->attr);
+    context_read_int8 (ctx, &char_shape->shadow_size1);
+    context_read_int8 (ctx, &char_shape->shadow_size2);
+    context_read_hwp_color (ctx, &char_shape->char_color);
+    context_read_hwp_color (ctx, &char_shape->line_color);
+    context_read_hwp_color (ctx, &char_shape->shade_color);
+    context_read_hwp_color (ctx, &char_shape->shadow_color);
+
+    if (context_check_version (ctx, 5, 0, 2, 1))
+        context_read_uint16 (ctx, &char_shape->border_fill_id);
+    if (context_check_version (ctx, 5, 0, 3, 0))
+        context_read_hwp_color (ctx, &char_shape->midline_color);
 }
