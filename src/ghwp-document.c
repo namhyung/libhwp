@@ -345,6 +345,7 @@ void ghwp_parse_document_id_mapping (GHWPDocument *doc,
 {
     GHWPDocumentIDMap *id_maps;
     gint    n_mappings = 15;
+    gint    n_fonts = 0;
     int     i;
 
     g_return_if_fail (GHWP_IS_DOCUMENT (doc));
@@ -363,6 +364,20 @@ void ghwp_parse_document_id_mapping (GHWPDocument *doc,
 
     doc->info_v5.bin_items = g_malloc0_n (id_maps->num[ID_BINARY_DATA],
                                           sizeof (*doc->info_v5.bin_items));
+
+    n_fonts = id_maps->num[ID_KOREAN_FONTS] + id_maps->num[ID_ENGLISH_FONTS] +
+        id_maps->num[ID_HANJA_FONTS] + id_maps->num[ID_JAPANESE_FONTS] +
+        id_maps->num[ID_OTHERS_FONTS] + id_maps->num[ID_SYMBOL_FONTS] +
+        id_maps->num[ID_USER_FONTS];
+
+    doc->info_v5.fonts_korean = g_malloc0_n (n_fonts,
+                                             sizeof (*doc->info_v5.fonts_korean));
+    doc->info_v5.fonts_english  = doc->info_v5.fonts_korean + id_maps->num[ID_KOREAN_FONTS];
+    doc->info_v5.fonts_chinese  = doc->info_v5.fonts_english + id_maps->num[ID_ENGLISH_FONTS];
+    doc->info_v5.fonts_japanese = doc->info_v5.fonts_chinese + id_maps->num[ID_HANJA_FONTS];
+    doc->info_v5.fonts_others   = doc->info_v5.fonts_japanese + id_maps->num[ID_JAPANESE_FONTS];
+    doc->info_v5.fonts_symbol   = doc->info_v5.fonts_others + id_maps->num[ID_OTHERS_FONTS];
+    doc->info_v5.fonts_user     = doc->info_v5.fonts_symbol + id_maps->num[ID_SYMBOL_FONTS];
 }
 
 void ghwp_parse_document_bin_data (GHWPDocument *doc,
@@ -386,5 +401,54 @@ void ghwp_parse_document_bin_data (GHWPDocument *doc,
 
     if ((item->attr & BINDATA_ATTR_TYPE_MASK) == BINDATA_ATTR_TYPE_EMBED) {
         item->ext = context_read_string (ctx);
+    }
+}
+
+void ghwp_parse_document_font_face (GHWPDocument *doc,
+                                    GHWPContext  *ctx,
+                                    gint          idx)
+{
+    GHWPFontFace *font;
+    gint total_fonts;
+
+    g_return_if_fail (GHWP_IS_DOCUMENT (doc));
+    g_return_if_fail (GHWP_IS_CONTEXT (ctx));
+
+    total_fonts = doc->info_v5.id_maps.num[ID_KOREAN_FONTS] +
+        doc->info_v5.id_maps.num[ID_ENGLISH_FONTS] +
+        doc->info_v5.id_maps.num[ID_HANJA_FONTS] +
+        doc->info_v5.id_maps.num[ID_JAPANESE_FONTS] +
+        doc->info_v5.id_maps.num[ID_OTHERS_FONTS] +
+        doc->info_v5.id_maps.num[ID_SYMBOL_FONTS] +
+        doc->info_v5.id_maps.num[ID_USER_FONTS];
+
+    g_return_if_fail (idx < total_fonts);
+
+    /* all fonts are allocated linearly */
+    font = &doc->info_v5.fonts_korean[idx];
+
+    context_read_uint8 (ctx, &font->attr);
+    font->name = context_read_string (ctx);
+
+    if (font->attr & FONT_FACE_ATTR_ALT_FONT) {
+        context_read_uint8 (ctx, &font->alt_attr);
+        font->alt_name = context_read_string (ctx);
+    }
+
+    if (font->attr & FONT_FACE_ATTR_FONT_TYPE) {
+        context_read_uint8 (ctx, &font->type.family);
+        context_read_uint8 (ctx, &font->type.serif);
+        context_read_uint8 (ctx, &font->type.weight);
+        context_read_uint8 (ctx, &font->type.proportion);
+        context_read_uint8 (ctx, &font->type.contrast);
+        context_read_uint8 (ctx, &font->type.stroke);
+        context_read_uint8 (ctx, &font->type.type);
+        context_read_uint8 (ctx, &font->type.char_type);
+        context_read_uint8 (ctx, &font->type.midline);
+        context_read_uint8 (ctx, &font->type.x_height);
+    }
+
+    if (font->attr & FONT_FACE_ATTR_DEF_FONT) {
+        font->def_name = context_read_string (ctx);
     }
 }

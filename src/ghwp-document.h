@@ -41,6 +41,8 @@ typedef struct _GHWPDocumentPrivate    GHWPDocumentPrivate;
 typedef struct _GHWPDocumentProperty   GHWPDocumentProperty;
 typedef struct _GHWPDocumentIDMap      GHWPDocumentIDMap;
 typedef struct _GHWPBinDataItem        GHWPBinDataItem;
+typedef struct _GHWPFontType           GHWPFontType;
+typedef struct _GHWPFontFace           GHWPFontFace;
 
 struct _GHWPDocumentProperty {
     guint16  n_sections;
@@ -110,6 +112,36 @@ struct _GHWPBinDataItem {
     gchar   *ext;
 };
 
+struct _GHWPFontType {
+    guint8        family;     /* 글꼴 계열 */
+    guint8        serif;      /* 세리프 유형 */
+    guint8        weight;     /* 굵기 */
+    guint8        proportion; /* 비례 */
+    guint8        contrast;   /* 대조 */
+    guint8        stroke;     /* 스트로크 편차 */
+    guint8        type;       /* 자획 유형 */
+    guint8        char_type;  /* 글자형 */
+    guint8        midline;    /* 중간선 */
+    guint8        x_height;   /* X-높이 */
+};
+
+#define FONT_FACE_ATTR_ALT_FONT   0x80
+#define FONT_FACE_ATTR_FONT_TYPE  0x40
+#define FONT_FACE_ATTR_DEF_FONT   0x20
+
+#define FONT_ALT_ATTR_UNKNOWN  0
+#define FONT_ALT_ATTR_TTF      1
+#define FONT_ALT_ATTR_HTF      2  /* 한글 전용 글꼴 */
+
+struct _GHWPFontFace {
+    guint8        attr;
+    gchar        *name;
+    guint8        alt_attr;
+    gchar        *alt_name;
+    GHWPFontType  type;
+    gchar        *def_name;
+};
+
 struct _GHWPDocument {
     GObject              parent_instance;
     GHWPDocumentPrivate *priv;
@@ -124,6 +156,13 @@ struct _GHWPDocument {
         GHWPDocumentProperty  prop;
         GHWPDocumentIDMap     id_maps;
         GHWPBinDataItem      *bin_items;
+        GHWPFontFace         *fonts_korean;
+        GHWPFontFace         *fonts_english;
+        GHWPFontFace         *fonts_chinese;
+        GHWPFontFace         *fonts_japanese;
+        GHWPFontFace         *fonts_others;
+        GHWPFontFace         *fonts_symbol;
+        GHWPFontFace         *fonts_user;
     } info_v5;
 
     /* ev info */
@@ -185,6 +224,9 @@ void      ghwp_parse_document_id_mapping       (GHWPDocument *document,
                                                 GHWPContext  *context);
 void      ghwp_parse_document_bin_data         (GHWPDocument *document,
                                                 GHWPContext  *context,
+                                                gint          idx);
+void      ghwp_parse_document_font_face        (GHWPDocument *doc,
+                                                GHWPContext  *ctx,
                                                 gint          idx);
 G_END_DECLS
 
