@@ -44,6 +44,7 @@ typedef struct _GHWPBinDataItem        GHWPBinDataItem;
 typedef struct _GHWPFontType           GHWPFontType;
 typedef struct _GHWPFontFace           GHWPFontFace;
 typedef struct _GHWPCharShape          GHWPCharShape;
+typedef struct _GHWPParaShape          GHWPParaShape;
 
 struct _GHWPDocumentProperty {
     guint16  n_sections;
@@ -177,6 +178,34 @@ struct _GHWPCharShape {
     ghwp_color  midline_color;   /* v5.0.3.0 */
 };
 
+#define PARA_SHAPE_ATTR1_ALIGN_MASK    0x1c
+#define PARA_SHAPE_ATTR1_ALIGN_BOTH    (0U << 2)
+#define PARA_SHAPE_ATTR1_ALIGN_LEFT    (1U << 2)
+#define PARA_SHAPE_ATTR1_ALIGN_RIGHT   (2U << 2)
+#define PARA_SHAPE_ATTR1_ALIGN_CENTER  (3U << 2)
+#define PARA_SHAPE_ATTR1_ALIGN_DIST    (4U << 2)  // 배분 정렬
+#define PARA_SHAPE_ATTR1_ALIGN_DIVIDE  (5U << 2)  // 나눔 정렬
+
+struct _GHWPParaShape {
+    guint32   attr1;
+    gint32    l_margin;
+    gint32    r_margin;
+    gint32    indent;
+    gint32    u_spacing;      // 문단 간격 위
+    gint32    d_spacing;      // 문단 간격 아래
+    gint32    l_spacing_old;  // 줄 간격 (v5.0.2.5 미만)
+    guint16   tab_def_id;
+    guint16   numbering_id;
+    guint16   border_fill_id;
+    gint16    border_l_spacing;
+    gint16    border_r_spacing;
+    gint16    border_u_spacing;
+    gint16    border_d_spacing;
+    guint32   attr2;      /* v5.0.1.7 */
+    guint32   attr3;      /* v5.0.2.5 */
+    guint32   l_spacing;  /* v5.0.2.5 */
+};
+
 struct _GHWPDocument {
     GObject              parent_instance;
     GHWPDocumentPrivate *priv;
@@ -199,6 +228,7 @@ struct _GHWPDocument {
         GHWPFontFace         *fonts_symbol;
         GHWPFontFace         *fonts_user;
         GHWPCharShape        *char_shapes;
+        GHWPParaShape        *para_shapes;
     } info_v5;
 
     /* ev info */
@@ -265,6 +295,9 @@ void      ghwp_parse_document_font_face        (GHWPDocument *doc,
                                                 GHWPContext  *ctx,
                                                 gint          idx);
 void      ghwp_parse_document_char_shape       (GHWPDocument *doc,
+                                                GHWPContext  *ctx,
+                                                gint          idx);
+void      ghwp_parse_document_para_shape       (GHWPDocument *doc,
                                                 GHWPContext  *ctx,
                                                 gint          idx);
 G_END_DECLS

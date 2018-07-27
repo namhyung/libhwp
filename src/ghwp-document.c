@@ -381,6 +381,8 @@ void ghwp_parse_document_id_mapping (GHWPDocument *doc,
 
     doc->info_v5.char_shapes = g_malloc0_n (id_maps->num[ID_CHAR_SHAPES],
                                             sizeof (*doc->info_v5.char_shapes));
+    doc->info_v5.para_shapes = g_malloc0_n (id_maps->num[ID_PARA_SHAPES],
+                                            sizeof (*doc->info_v5.para_shapes));
 
 }
 
@@ -494,4 +496,43 @@ void ghwp_parse_document_char_shape (GHWPDocument *doc,
         context_read_uint16 (ctx, &char_shape->border_fill_id);
     if (context_check_version (ctx, 5, 0, 3, 0))
         context_read_hwp_color (ctx, &char_shape->midline_color);
+}
+
+void ghwp_parse_document_para_shape (GHWPDocument *doc,
+                                     GHWPContext  *ctx,
+                                     gint          idx)
+{
+    GHWPParaShape *para_shape;
+
+    g_return_if_fail (GHWP_IS_DOCUMENT (doc));
+    g_return_if_fail (GHWP_IS_CONTEXT (ctx));
+    g_return_if_fail (idx < doc->info_v5.id_maps.num[ID_PARA_SHAPES]);
+
+    para_shape = &doc->info_v5.para_shapes[idx];
+
+    context_read_uint32 (ctx, &para_shape->attr1);
+    context_read_int32 (ctx, &para_shape->l_margin);
+    context_read_int32 (ctx, &para_shape->r_margin);
+    context_read_int32 (ctx, &para_shape->indent);
+    context_read_int32 (ctx, &para_shape->u_spacing);
+    context_read_int32 (ctx, &para_shape->d_spacing);
+
+    if (!context_check_version (ctx, 5, 0, 1, 7))
+        context_read_int32 (ctx, &para_shape->l_spacing_old);
+
+    context_read_uint16 (ctx, &para_shape->tab_def_id);
+    context_read_uint16 (ctx, &para_shape->numbering_id);
+    context_read_uint16 (ctx, &para_shape->border_fill_id);
+
+    context_read_int16 (ctx, &para_shape->border_l_spacing);
+    context_read_int16 (ctx, &para_shape->border_r_spacing);
+    context_read_int16 (ctx, &para_shape->border_u_spacing);
+    context_read_int16 (ctx, &para_shape->border_d_spacing);
+
+    if (context_check_version (ctx, 5, 0, 1, 7))
+        context_read_uint32 (ctx, &para_shape->attr2);
+
+    if (!context_check_version (ctx, 5, 0, 2, 5)) {
+        context_read_uint32 (ctx, &para_shape->attr3);
+    }
 }
