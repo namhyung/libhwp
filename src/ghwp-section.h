@@ -92,6 +92,7 @@ struct _GHWPSection
     GHWPPageDef     page_info;
     GHWPColumnDef   col_info;
     GArray         *paragraphs;
+    GHWPDocument   *document;
 };
 
 struct _GHWPSectionClass

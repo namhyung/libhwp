@@ -53,20 +53,55 @@ void ghwp_page_add_paragraph(GHWPPage      *page,
 #include <cairo-ft.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include <fontconfig/fontconfig.h>
 
-static FT_Library ft_lib;
-static FT_Face    ft_face;
+static FT_Library  ft_lib;
+static FT_Face    *ft_face;
+static FcConfig   *fc_config;
+
+static void load_font_face(GHWPFontFace *ghwp_face, FT_Face *face)
+static void load_font_face (GHWPFontFace *ghwp_face, FT_Face *face)
+{
+    FcPattern* pat;
+    FcChar8* file = NULL;
+    FcPattern *font;
+    FcResult result;
+
+    pat = FcNameParse ((const FcChar8 *)ghwp_face->name);
+    FcConfigSubstitute (fc_config, pat, FcMatchPattern);
+    FcDefaultSubstitute (pat);
+
+    font = FcFontMatch (fc_config, pat, &result);
+	if (font) {
+        if (FcPatternGetString (font, FC_FILE, 0, &file) == FcResultMatch) {
+            //we found the font, now load it.
+            //This might be a fallback font
+            dbg ("loading (%s) %s\n", ghwp_face->name, file);
+            FT_New_Face (ft_lib, (const gchar *)file, 0, face);
+        }
+	}
+    FcPatternDestroy (pat);
+}
+
 /*한 번만 초기화, 로드 */
 static void
-once_ft_init_and_new (void)
+once_ft_init_and_new (GHWPDocument *doc)
 {
     static gsize ft_init = 0;
 
     if (g_once_init_enter (&ft_init)) {
+        guint32 i;
+        guint32 n_fonts;
 
         FT_Init_FreeType (&ft_lib);
-        FT_New_Face (ft_lib, "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
-                     0, &ft_face);
+        fc_config = FcInitLoadConfigAndFonts ();
+
+        n_fonts = doc->info_v5.id_maps.num[ID_KOREAN_FONTS];
+        ft_face = calloc (n_fonts, sizeof (*ft_face));
+
+        for (i = 0; i < n_fonts; i++) {
+            load_font_face (&doc->info_v5.fonts_korean[i], &ft_face[i]);
+        }
 
         g_once_init_leave (&ft_init, (gsize)1);
     }
@@ -122,8 +157,8 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
     double y = 40.0;
 
     /* create scaled font */
-    once_ft_init_and_new(); /*한 번만 초기화, 로드*/
-    font_face = cairo_ft_font_face_create_for_ft_face (ft_face, 0);
+    once_ft_init_and_new(page->section->document); /*한 번만 초기화, 로드*/
+    font_face = cairo_ft_font_face_create_for_ft_face (ft_face[0], 0);
     cairo_matrix_init_identity (&font_matrix);
     cairo_matrix_scale (&font_matrix, 12.0, 12.0);
     cairo_get_matrix (cr, &ctm);

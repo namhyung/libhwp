@@ -227,6 +227,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         context->version[3] = file->extra_version;
 
         section = ghwp_section_new ();
+        section->document = doc;
         g_array_append_val (doc->sections, section);
 
         while (ghwp_context_pull(context, error)) {
