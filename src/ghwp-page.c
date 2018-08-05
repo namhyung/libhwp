@@ -18,7 +18,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include "ghwp-page.h"
+
+extern void gdk_cairo_set_source_pixbuf (cairo_t *cr,
+                                         const GdkPixbuf *pixbuf,
+                                         double pixbuf_x,
+                                         double pixbuf_y);
 
 G_DEFINE_TYPE (GHWPPage, ghwp_page, G_TYPE_OBJECT);
 
@@ -136,6 +142,63 @@ once_ft_init_and_new (GHWPDocument *doc, cairo_t *cr)
 
         g_once_init_leave (&ft_init, (gsize)1);
     }
+}
+
+static void draw_picture (cairo_t *cr, GHWPPicture *pic, GHWPParagraph *paragraph,
+                          GHWPPageDef *page_info, double para_x, double para_y)
+{
+    GHWPGSO *gso = pic->gso;
+    gdouble  x = 0;
+    gdouble  y = 0;
+
+    if (pic->stream == NULL)
+        return;  /* only support pictures in the document */
+
+    /* from gdk-pixbuf 2.14 */
+    if (pic->pixbuf == NULL) {
+        GError *error = NULL;
+
+        pic->pixbuf = gdk_pixbuf_new_from_stream_at_scale (pic->stream,
+                                           gso->component.current_width / GHWP_UPP,
+                                           gso->component.current_height / GHWP_UPP,
+                                           TRUE, NULL, &error);
+        if (error != NULL) {
+            g_warning ("Error: %s\n", error->message);
+            g_clear_error (&error);
+            return;
+        }
+    }
+
+    switch (gso->object.attr & OBJ_ATTR_VERT_REL_TO_MASK) {
+    case OBJ_ATTR_VERT_REL_TO_PARA:
+        y += para_y;
+        /* fall through */
+    case OBJ_ATTR_VERT_REL_TO_PAGE:
+        y += page_info->t_margin + page_info->header;
+        /* fall through */
+    case OBJ_ATTR_VERT_REL_TO_PAPER:
+        y += gso->object.v_offset + gso->object.t_spacing + gso->component.y_offset;
+        break;
+    }
+
+    switch (gso->object.attr & OBJ_ATTR_HORZ_REL_TO_MASK) {
+    case OBJ_ATTR_HORZ_REL_TO_PARA:
+        x += para_x;
+        /* fall through */
+    case OBJ_ATTR_HORZ_REL_TO_COLUMN:
+        /* TODO: support multi-column document */
+        /* fall through */
+    case OBJ_ATTR_HORZ_REL_TO_PAGE:
+        x += page_info->l_margin;
+        /* fall through */
+    case OBJ_ATTR_HORZ_REL_TO_PAPER:
+        x += gso->object.h_offset + gso->object.l_spacing + gso->component.x_offset;
+        break;
+    }
+
+    g_object_ref (pic->pixbuf);
+    gdk_cairo_set_source_pixbuf (cr, pic->pixbuf, x / GHWP_UPP, y / GHWP_UPP);
+    cairo_paint (cr);
 }
 
 static gdouble draw_text_line (cairo_t             *cr,
@@ -262,6 +325,7 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
     GHWPTableCell *cell;
     GHWPPageDef   *page_info;
     GHWPLineSeg   *line;
+    GHWPPicture   *pic;
 
     double x = 20.0;
     double y = 40.0;
@@ -327,6 +391,16 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
 
                 cell_width  = cell->width;
             }
+        }
+
+        pic = ghwp_paragraph_get_picture (paragraph);
+        if (pic != NULL) {
+            line = g_array_index (paragraph->line_segs, GHWPLineSeg *, 0);
+
+            x = page_info->l_margin;
+            y = page_info->t_margin + page_info->header + line->v_pos;
+
+            draw_picture (cr, pic, paragraph, page_info, x, y);
         }
     }
 

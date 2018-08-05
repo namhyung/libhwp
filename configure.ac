@@ -53,7 +53,7 @@ AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED([GETTEXT_PACKAGE],["$GETTEXT_PACKAGE"],[Gettext package])
 AM_GLIB_GNU_GETTEXT
 
-PKG_CHECK_MODULES(GHWP, [libgsf-1 glib-2.0 gio-2.0 cairo gobject-2.0 cairo-ft freetype2 libxml-2.0 fontconfig])
+PKG_CHECK_MODULES(GHWP, [libgsf-1 glib-2.0 gio-2.0 cairo gobject-2.0 cairo-ft freetype2 libxml-2.0 fontconfig gdk-pixbuf-2.0])
 
 dnl gsf_msole_metadata_read is deprecated since libgsf 1.14.24
 dnl check if your libgsf-1 have gsf_doc_meta_data_read_from_msole
