@@ -142,7 +142,7 @@ static gdouble draw_text_line (cairo_t             *cr,
                                cairo_scaled_font_t *font,
                                double               x,
                                double               y,
-                               const gchar         *text,
+                               GHWPText            *text,
                                gint                 start,
                                gint                 end)
 {
@@ -150,11 +150,25 @@ static gdouble draw_text_line (cairo_t             *cr,
     int    num_glyphs;
     cairo_glyph_t *glyphs = NULL; /* NULL로 지정하면 자동 할당됨 */
     cairo_text_extents_t extents;
+    GString  *strbuf = g_string_new ("");
+    gunichar2 ch;
+    gint i;
 
     if (start >= end)
         return x;
 
-    str = g_utf8_substring (text, start, end);
+    for (i = start; i < end; i++) {
+        ch = text->buf[i];
+
+        if (ch >= GHWP_NUM_CC || ghwp_control_char_type[ch] == GHWP_CC_TYPE_CHAR) {
+            g_string_append_unichar (strbuf, ch);
+            continue;
+        }
+
+        /* TODO: handle control characters if needed */
+        i += 7;
+    }
+    str = g_string_free (strbuf, FALSE);
 
     cairo_scaled_font_text_to_glyphs (font, x / GHWP_UPP, y / GHWP_UPP, str, -1,
                                       &glyphs, &num_glyphs, NULL, NULL, NULL);
@@ -190,7 +204,7 @@ static void draw_paragraph_texts (cairo_t       *cr,
         text_start = line->text_start;
 
         if (i == paragraph->line_segs->len - 1) {
-            text_end = strlen(ghwp_text->text);
+            text_end = ghwp_text->n_chars;
         } else {
             GHWPLineSeg *next_line  = g_array_index (paragraph->line_segs,
                                                      GHWPLineSeg *, i + 1);
@@ -228,7 +242,7 @@ static void draw_paragraph_texts (cairo_t       *cr,
                                   GHWP_COLOR_B(shape->char_color));
 
             x = draw_text_line(cr, font, x + line->col_offset, y + line->v_pos,
-                               ghwp_text->text, shape_start, shape_end);
+                               ghwp_text, shape_start, shape_end);
 
             shape_start = shape_end;
         } while (shape_end < text_end);

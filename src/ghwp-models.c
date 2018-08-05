@@ -78,7 +78,7 @@ void ghwp_parse_list_header (GHWPListHeader *hdr, GHWPContext *ctx)
 #define GCCT_I  GHWP_CC_TYPE_INLINE
 #define GCCT_E  GHWP_CC_TYPE_EXTENDED
 
-static enum ghwp_control_type ghwp_control_char_type[GHWP_NUM_CC] = {
+enum ghwp_control_type ghwp_control_char_type[GHWP_NUM_CC] = {
     GCCT_C, GCCT_E, GCCT_E, GCCT_E, GCCT_I, GCCT_I, GCCT_I, GCCT_I,
     GCCT_I, GCCT_I, GCCT_C, GCCT_E, GCCT_E, GCCT_C, GCCT_E, GCCT_E,
     GCCT_E, GCCT_E, GCCT_E, GCCT_I, GCCT_I, GCCT_E, GCCT_E, GCCT_E,

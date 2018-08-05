@@ -304,6 +304,8 @@ enum ghwp_control_type {
     GHWP_CC_TYPE_EXTENDED,
 };
 
+extern enum ghwp_control_type ghwp_control_char_type[GHWP_NUM_CC];
+
 typedef struct _GHWPText        GHWPText;
 typedef struct _GHWPTextClass   GHWPTextClass;
 typedef struct _GHWPTextPrivate GHWPTextPrivate;
