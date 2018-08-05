@@ -138,29 +138,33 @@ once_ft_init_and_new (GHWPDocument *doc, cairo_t *cr)
     }
 }
 
-static void draw_text_line (cairo_t             *cr,
-                            cairo_scaled_font_t *font,
-                            double               x,
-                            double               y,
-                            const gchar         *text,
-                            gint                 start,
-                            gint                 end)
+static gdouble draw_text_line (cairo_t             *cr,
+                               cairo_scaled_font_t *font,
+                               double               x,
+                               double               y,
+                               const gchar         *text,
+                               gint                 start,
+                               gint                 end)
 {
     gchar *str;
     int    num_glyphs;
     cairo_glyph_t *glyphs = NULL; /* NULL로 지정하면 자동 할당됨 */
+    cairo_text_extents_t extents;
 
     if (start >= end)
-        return;
+        return x;
 
     str = g_utf8_substring (text, start, end);
 
     cairo_scaled_font_text_to_glyphs (font, x / GHWP_UPP, y / GHWP_UPP, str, -1,
                                       &glyphs, &num_glyphs, NULL, NULL, NULL);
     cairo_show_glyphs (cr, glyphs, num_glyphs);
+    cairo_glyph_extents (cr, glyphs, num_glyphs, &extents);
 
     cairo_glyph_free (glyphs);
     _g_free0 (str);
+
+    return x + extents.x_advance * GHWP_UPP;
 }
 
 static void draw_paragraph_texts (cairo_t       *cr,
@@ -223,10 +227,8 @@ static void draw_paragraph_texts (cairo_t       *cr,
                                   GHWP_COLOR_G(shape->char_color),
                                   GHWP_COLOR_B(shape->char_color));
 
-            draw_text_line(cr, font, x + line->col_offset, y + line->v_pos,
-                           ghwp_text->text, shape_start, shape_end);
-            // FIXME
-            x += shape->width[0] * (shape_end - shape_start)/ GHWP_UPP;
+            x = draw_text_line(cr, font, x + line->col_offset, y + line->v_pos,
+                               ghwp_text->text, shape_start, shape_end);
 
             shape_start = shape_end;
         } while (shape_end < text_end);
