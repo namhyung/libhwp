@@ -57,9 +57,10 @@ void ghwp_page_add_paragraph(GHWPPage      *page,
 
 static FT_Library  ft_lib;
 static FT_Face    *ft_face;
-static FcConfig   *fc_config;
 
-static void load_font_face(GHWPFontFace *ghwp_face, FT_Face *face)
+static FcConfig              *fc_config;
+static cairo_scaled_font_t  **scaled_font;
+
 static void load_font_face (GHWPFontFace *ghwp_face, FT_Face *face)
 {
     FcPattern* pat;
@@ -83,9 +84,32 @@ static void load_font_face (GHWPFontFace *ghwp_face, FT_Face *face)
     FcPatternDestroy (pat);
 }
 
+static void scale_cairo_font (GHWPCharShape *shape, cairo_t *cr,
+                              cairo_scaled_font_t **font)
+{
+    FT_Face              *face;
+    cairo_font_face_t    *font_face;
+    cairo_matrix_t        font_matrix;
+    cairo_matrix_t        ctm;
+    cairo_font_options_t *font_options;
+
+    face = &ft_face[shape->face_id[CHAR_SHAPE_LANG_KO]];
+
+    font_face = cairo_ft_font_face_create_for_ft_face (*face, 0);
+    cairo_matrix_init_identity (&font_matrix);
+    cairo_matrix_scale (&font_matrix, shape->def_size / GHWP_UPP,
+                        shape->def_size / GHWP_UPP);
+    cairo_get_matrix (cr, &ctm);
+
+    font_options = cairo_font_options_create ();
+    cairo_get_font_options (cr, font_options);
+    *font = cairo_scaled_font_create (font_face, &font_matrix, &ctm, font_options);
+    cairo_font_options_destroy (font_options);
+}
+
 /*한 번만 초기화, 로드 */
 static void
-once_ft_init_and_new (GHWPDocument *doc)
+once_ft_init_and_new (GHWPDocument *doc, cairo_t *cr)
 {
     static gsize ft_init = 0;
 
@@ -101,6 +125,13 @@ once_ft_init_and_new (GHWPDocument *doc)
 
         for (i = 0; i < n_fonts; i++) {
             load_font_face (&doc->info_v5.fonts_korean[i], &ft_face[i]);
+        }
+
+        n_fonts = doc->info_v5.id_maps.num[ID_CHAR_SHAPES];
+        scaled_font = calloc (n_fonts, sizeof (*scaled_font));
+
+        for (i = 0; i < n_fonts; i++) {
+            scale_cairo_font (&doc->info_v5.char_shapes[i], cr, &scaled_font[i]);
         }
 
         g_once_init_leave (&ft_init, (gsize)1);
@@ -147,28 +178,13 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
     GHWPPageDef   *page_info;
     GHWPLineSeg   *line;
 
-    cairo_scaled_font_t  *scaled_font;
-    cairo_font_face_t    *font_face;
-    cairo_matrix_t        font_matrix;
-    cairo_matrix_t        ctm;
-    cairo_font_options_t *font_options;
-
     double x = 20.0;
     double y = 40.0;
 
     /* create scaled font */
-    once_ft_init_and_new(page->section->document); /*한 번만 초기화, 로드*/
-    font_face = cairo_ft_font_face_create_for_ft_face (ft_face[0], 0);
-    cairo_matrix_init_identity (&font_matrix);
-    cairo_matrix_scale (&font_matrix, 12.0, 12.0);
-    cairo_get_matrix (cr, &ctm);
-    font_options = cairo_font_options_create ();
-    cairo_get_font_options (cr, font_options);
-    scaled_font = cairo_scaled_font_create (font_face,
-                                           &font_matrix, &ctm, font_options);
-    cairo_font_options_destroy (font_options);
+    once_ft_init_and_new (page->section->document, cr); /*한 번만 초기화, 로드*/
 
-    cairo_set_scaled_font(cr, scaled_font); /* 요 문장 없으면 fault 떨어짐 */
+    cairo_set_scaled_font (cr, scaled_font[0]); /* 요 문장 없으면 fault 떨어짐 */
     cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
 
     page_info = &page->section->page_info;
@@ -191,7 +207,7 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                     text_end = next_line->text_start;
                 }
 
-                draw_text_line(cr, scaled_font, (page_info->l_margin + line->col_offset) / GHWP_UPP,
+                draw_text_line(cr, scaled_font[0], (page_info->l_margin + line->col_offset) / GHWP_UPP,
                                (page_info->t_margin + page_info->header + line->v_pos) / GHWP_UPP,
                                ghwp_text->text, line->text_start, text_end);
             }
@@ -248,7 +264,7 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                                 text_end = next_line->text_start;
                             }
 
-                            draw_text_line(cr, scaled_font, (x + cell->l_margin) / GHWP_UPP,
+                            draw_text_line(cr, scaled_font[0], (x + cell->l_margin) / GHWP_UPP,
                                            (y + cell->t_margin + line->line_height) / GHWP_UPP,
                                            ghwp_text->text, line->text_start, text_end);
                         }
@@ -259,8 +275,6 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
             }
         }
     }
-
-    cairo_scaled_font_destroy (scaled_font);
 
     cairo_restore (cr);
     return TRUE;
