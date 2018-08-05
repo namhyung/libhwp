@@ -111,7 +111,22 @@ typedef enum
     CTRL_ID_TABLE		= GUINT32_FROM_LE(MAKE_CTRL_ID('t', 'b', 'l', ' ')),
     CTRL_ID_SEC_DEF		= GUINT32_FROM_LE(MAKE_CTRL_ID('s', 'e', 'c', 'd')),
     CTRL_ID_COL_DEF		= GUINT32_FROM_LE(MAKE_CTRL_ID('c', 'o', 'l', 'd')),
+    CTRL_ID_GSO	    	= GUINT32_FROM_LE(MAKE_CTRL_ID('g', 's', 'o', ' ')),
+
+    CTRL_ID_PICTURE		= GUINT32_FROM_LE(MAKE_CTRL_ID('$', 'p', 'i', 'c')),
 } CtrlID;
+
+static void prepare_picture (GHWPPicture *pic, GHWPDocument *doc)
+{
+    GHWPFileV5      *file = GHWP_FILE_V5 (doc->file);
+    GHWPBinDataItem *item = &doc->info_v5.bin_items[pic->binitem_id - 1];
+
+    if ((item->attr & BINDATA_ATTR_TYPE_MASK) != BINDATA_ATTR_TYPE_EMBED)
+        return;  /* only support pictures in the document */
+
+    pic->stream = g_array_index (file->bindata_streams, GInputStream *,
+                                 item->bindata_id - 1);
+}
 
 /* TODO fsm parser, nautilus에서 파일 속성만 보는 경우가 있으므로 속도 문제
  * 때문에 get_n_pages 로 옮겨갈 필요가 있다. */
@@ -130,6 +145,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         GHWPContext   *context;
         GHWPTable     *table = NULL;
         GHWPTableCell *cell = NULL;
+        GHWPGSO       *gso = NULL;
         GHWPListHeader lhdr;
 
         section_stream = g_array_index (file->section_streams,
@@ -215,6 +231,12 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 case CTRL_ID_COL_DEF:
                     ghwp_parse_column_def (section, context);
                     break;
+                case CTRL_ID_GSO:  /* GenShapeObject? */
+                    gso = ghwp_gso_new ();
+                    ghwp_parse_common_object (&gso->object, context);
+                    curr_status->s = STATE_GSO;
+                    curr_status->p = gso;
+                    break;
                 default:
                     curr_status->s = STATE_NORMAL;
                     break;
@@ -252,6 +274,36 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
             case GHWP_TAG_PAGE_DEF:
                 ghwp_parse_page_def (section, context);
+                break;
+
+            case GHWP_TAG_SHAPE_COMPONENT:
+                if (context->status[context->level - 1].s == STATE_GSO) {
+                    guint32 real_id;
+
+                    /* 개체 요소: GenShapeObject일 경우 id가 두 번 기록 됨) */
+                    context_read_uint32 (context, &real_id);
+
+                    dbg ("%*s component: "CTRL_ID_FMT"\n", context->level * 3, "",
+                         CTRL_ID_PRINT (real_id));
+
+                    gso = context->status[context->level - 1].p;
+                    ghwp_parse_shape_component (&gso->component, context);
+                }
+                break;
+
+            case GHWP_TAG_SHAPE_COMPONENT_PICTURE:
+                if (context->status[context->level - 2].s == STATE_GSO) {
+                    gso = context->status[context->level - 2].p;
+                } else {
+                    g_warning ("picture without gso");
+                    break;
+                }
+
+                gso->u.picture = ghwp_picture_new ();
+                ghwp_parse_picture (gso->u.picture, context);
+                ghwp_picture_set_gso (gso->u.picture, gso);
+                prepare_picture (gso->u.picture, doc);
+                ghwp_paragraph_set_picture (paragraph, gso->u.picture);
                 break;
 
             default:

@@ -45,6 +45,7 @@ typedef enum
     STATE_PARAGRAPH,
     STATE_CTRL_TABLE,
     STATE_TABLE,
+    STATE_GSO,
 } GHWPContextState;
 
 #define GHWP_MAX_STATE  1024

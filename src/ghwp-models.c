@@ -157,6 +157,10 @@ GHWPPicture *ghwp_picture_new (void)
 
 static void ghwp_picture_finalize (GObject *obj)
 {
+    GHWPPicture *pic = GHWP_PICTURE (obj);
+
+    _g_object_unref0 (pic->pixbuf);
+    _g_object_unref0 (pic->stream);
     G_OBJECT_CLASS (ghwp_picture_parent_class)->finalize (obj);
 }
 
@@ -168,6 +172,8 @@ static void ghwp_picture_class_init (GHWPPictureClass *klass)
 
 static void ghwp_picture_init (GHWPPicture *pic)
 {
+    pic->gso    = NULL;
+    pic->stream = NULL;
 }
 
 void ghwp_parse_picture (GHWPPicture *pic, GHWPContext *ctx)
@@ -199,7 +205,7 @@ void ghwp_parse_picture (GHWPPicture *pic, GHWPContext *ctx)
 
 void ghwp_picture_set_gso (GHWPPicture *pic, GHWPGSO *gso)
 {
-    gso->picture = pic;
+    gso->u.picture = pic;
 
     pic->gso = malloc (sizeof (*gso));
     memcpy(pic->gso, gso, sizeof (*gso));
