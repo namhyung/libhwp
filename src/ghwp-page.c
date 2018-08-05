@@ -59,7 +59,7 @@ static FT_Library  ft_lib;
 static FT_Face    *ft_face;
 
 static FcConfig              *fc_config;
-static cairo_scaled_font_t  **scaled_font;
+static cairo_scaled_font_t  **scaled_fonts;
 
 static void load_font_face (GHWPFontFace *ghwp_face, FT_Face *face)
 {
@@ -128,10 +128,10 @@ once_ft_init_and_new (GHWPDocument *doc, cairo_t *cr)
         }
 
         n_fonts = doc->info_v5.id_maps.num[ID_CHAR_SHAPES];
-        scaled_font = calloc (n_fonts, sizeof (*scaled_font));
+        scaled_fonts = calloc (n_fonts, sizeof (*scaled_fonts));
 
         for (i = 0; i < n_fonts; i++) {
-            scale_cairo_font (&doc->info_v5.char_shapes[i], cr, &scaled_font[i]);
+            scale_cairo_font (&doc->info_v5.char_shapes[i], cr, &scaled_fonts[i]);
         }
 
         g_once_init_leave (&ft_init, (gsize)1);
@@ -155,13 +155,82 @@ static void draw_text_line (cairo_t             *cr,
 
     str = g_utf8_substring (text, start, end);
 
-    cairo_scaled_font_text_to_glyphs (font, x, y, str, -1,
-                                      &glyphs, &num_glyphs,
-                                      NULL, NULL, NULL);
+    cairo_scaled_font_text_to_glyphs (font, x / GHWP_UPP, y / GHWP_UPP, str, -1,
+                                      &glyphs, &num_glyphs, NULL, NULL, NULL);
     cairo_show_glyphs (cr, glyphs, num_glyphs);
 
     cairo_glyph_free (glyphs);
     _g_free0 (str);
+}
+
+static void draw_paragraph_texts (cairo_t       *cr,
+                                  GHWPDocument  *document,
+                                  GHWPParagraph *paragraph,
+                                  gdouble        start_x,
+                                  gdouble        start_y)
+{
+    gint      i, k = 0;
+    GHWPText *ghwp_text = paragraph->ghwp_text;
+
+    for (i = paragraph->line_start; i < paragraph->line_end; i++) {
+        GHWPLineSeg *line = NULL;
+        GHWPCharShapeRef *shape_ref = NULL;
+        gint text_start;
+        gint text_end;
+        gint shape_start;
+        gint shape_end;
+        gdouble x = start_x;
+        gdouble y = start_y;
+
+        line  = g_array_index (paragraph->line_segs, GHWPLineSeg *, i);
+        text_start = line->text_start;
+
+        if (i == paragraph->line_segs->len - 1) {
+            text_end = strlen(ghwp_text->text);
+        } else {
+            GHWPLineSeg *next_line  = g_array_index (paragraph->line_segs,
+                                                     GHWPLineSeg *, i + 1);
+            text_end = next_line->text_start;
+        }
+
+        for (k = paragraph->char_shapes->len - 1; k >=0; k--) {
+            shape_ref  = g_array_index (paragraph->char_shapes,
+                                        GHWPCharShapeRef *, k);
+            if (shape_ref->pos <= text_start)
+                break;
+        }
+
+        shape_start = text_start;
+
+        do {
+            GHWPCharShape *shape;
+            cairo_scaled_font_t *font;
+
+            shape = &document->info_v5.char_shapes[shape_ref->id];
+            font  = scaled_fonts[shape_ref->id];
+            k++;
+
+            if (k == paragraph->char_shapes->len) {
+                shape_end = text_end;
+            } else {
+                shape_ref  = g_array_index (paragraph->char_shapes,
+                                            GHWPCharShapeRef *, k);
+                shape_end = shape_ref->pos;
+            }
+
+            cairo_set_scaled_font(cr, font);
+            cairo_set_source_rgb (cr, GHWP_COLOR_R(shape->char_color),
+                                  GHWP_COLOR_G(shape->char_color),
+                                  GHWP_COLOR_B(shape->char_color));
+
+            draw_text_line(cr, font, x + line->col_offset, y + line->v_pos,
+                           ghwp_text->text, shape_start, shape_end);
+            // FIXME
+            x += shape->width[0] * (shape_end - shape_start)/ GHWP_UPP;
+
+            shape_start = shape_end;
+        } while (shape_end < text_end);
+    }
 }
 
 gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
@@ -184,9 +253,6 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
     /* create scaled font */
     once_ft_init_and_new (page->section->document, cr); /*한 번만 초기화, 로드*/
 
-    cairo_set_scaled_font (cr, scaled_font[0]); /* 요 문장 없으면 fault 떨어짐 */
-    cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
-
     page_info = &page->section->page_info;
 
     for (i = 0; i < page->paragraphs->len; i++) {
@@ -195,23 +261,11 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
 
         /* draw text */
         if ((ghwp_text != NULL) && !(g_str_equal(ghwp_text->text, "\n\r"))) {
-            for (j = paragraph->line_start; j < paragraph->line_end; j++) {
-                gint text_end;
-                line = g_array_index (paragraph->line_segs, GHWPLineSeg *, j);
-
-                if (j == paragraph->header.n_line_segs - 1)
-                    text_end = g_utf8_strlen(ghwp_text->text, -1);
-                else {
-                    GHWPLineSeg *next_line = g_array_index (paragraph->line_segs,
-                                                            GHWPLineSeg *, j + 1);
-                    text_end = next_line->text_start;
-                }
-
-                draw_text_line(cr, scaled_font[0], (page_info->l_margin + line->col_offset) / GHWP_UPP,
-                               (page_info->t_margin + page_info->header + line->v_pos) / GHWP_UPP,
-                               ghwp_text->text, line->text_start, text_end);
-            }
+            draw_paragraph_texts (cr, page->section->document, paragraph,
+                                  page_info->l_margin,
+                                  page_info->t_margin + page_info->header);
         }
+
         /* draw table */
         table = ghwp_paragraph_get_table (paragraph);
         if (table != NULL) {
@@ -226,7 +280,6 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                              table->obj.height / GHWP_UPP);
             cairo_stroke (cr);
 
-            guint l;
             guint cell_width = 0;
 
             for (j = 0; j < table->cells->len; j++) {
@@ -250,24 +303,9 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
                     paragraph = g_array_index(cell->paragraphs,
                                               GHWPParagraph *, k);
                     if (paragraph->ghwp_text) {
-                        for (l = paragraph->line_start; l < paragraph->line_end; l++) {
-                            gint text_end;
-
-                            ghwp_text = paragraph->ghwp_text;
-                            line = g_array_index (paragraph->line_segs, GHWPLineSeg *, l);
-
-                            if (l == paragraph->header.n_line_segs - 1) {
-                                text_end = g_utf8_strlen(ghwp_text->text, -1);
-                            } else {
-                                GHWPLineSeg *next_line = g_array_index (paragraph->line_segs,
-                                                                        GHWPLineSeg *, l + 1);
-                                text_end = next_line->text_start;
-                            }
-
-                            draw_text_line(cr, scaled_font[0], (x + cell->l_margin) / GHWP_UPP,
-                                           (y + cell->t_margin + line->line_height) / GHWP_UPP,
-                                           ghwp_text->text, line->text_start, text_end);
-                        }
+                        draw_paragraph_texts (cr, page->section->document, paragraph,
+                                              x + cell->l_margin,
+                                              y + line->line_height - cell->b_margin);
                     }
                 }
 
