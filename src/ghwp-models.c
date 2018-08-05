@@ -74,14 +74,26 @@ void ghwp_parse_list_header (GHWPListHeader *hdr, GHWPContext *ctx)
 
 /** GHWPText *****************************************************************/
 
+#define GCCT_C  GHWP_CC_TYPE_CHAR
+#define GCCT_I  GHWP_CC_TYPE_INLINE
+#define GCCT_E  GHWP_CC_TYPE_EXTENDED
+
+static enum ghwp_control_type ghwp_control_char_type[GHWP_NUM_CC] = {
+    GCCT_C, GCCT_E, GCCT_E, GCCT_E, GCCT_I, GCCT_I, GCCT_I, GCCT_I,
+    GCCT_I, GCCT_I, GCCT_C, GCCT_E, GCCT_E, GCCT_C, GCCT_E, GCCT_E,
+    GCCT_E, GCCT_E, GCCT_E, GCCT_I, GCCT_I, GCCT_E, GCCT_E, GCCT_E,
+    GCCT_C, GCCT_C, GCCT_C, GCCT_C, GCCT_C, GCCT_C, GCCT_C, GCCT_C,
+};
+
+#undef GCCT_C
+#undef GCCT_I
+#undef GCCT_E
+
 G_DEFINE_TYPE (GHWPText, ghwp_text, G_TYPE_OBJECT);
 
-GHWPText *ghwp_text_new (const gchar *text)
+GHWPText *ghwp_text_new (void)
 {
-    g_return_val_if_fail (text != NULL, NULL);
-    GHWPText *ghwp_text = (GHWPText *) g_object_new (GHWP_TYPE_TEXT, NULL);
-    ghwp_text->text = g_strdup (text);
-    return ghwp_text;
+    return (GHWPText *) g_object_new (GHWP_TYPE_TEXT, NULL);
 }
 
 GHWPText *ghwp_text_append (GHWPText *ghwp_text, const gchar *text)
@@ -231,6 +243,42 @@ void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
 
     paragraph->line_start = 0;
     paragraph->line_end = paragraph->header.n_line_segs;
+}
+
+void ghwp_parse_paragraph_text (GHWPParagraph *paragraph,
+                                GHWPContext *ctx)
+{
+    guint i;
+    GHWPText *ghwp_text;
+    GString  *str = g_string_new("");
+
+    g_return_if_fail (paragraph != NULL);
+
+    ghwp_text = ghwp_text_new ();
+    ghwp_text->buf = g_malloc0(ctx->data_len);
+    ghwp_text->n_chars = ctx->data_len / 2;
+
+    for (i = 0; i < ghwp_text->n_chars; i++) {
+        context_read_uint16 (ctx, &ghwp_text->buf[i]);
+    }
+
+    for (i = 0; i < ghwp_text->n_chars; i++) {
+        gunichar2 ch = ghwp_text->buf[i];
+
+        if (ch < GHWP_NUM_CC) {
+            if (ghwp_control_char_type[ch] != GHWP_CC_TYPE_CHAR) {
+                if (ch != ghwp_text->buf[i + 7])
+                    dbg ("%*s control char mismatch: pos %u (%d != %#hx)\n",
+                         ctx->level * 3, "", i, ch, ghwp_text->buf[i + 7]);
+                continue;
+            }
+        }
+
+        g_string_append_unichar(str, ch);
+    }
+    ghwp_text->text = g_string_free (str, FALSE);
+
+    ghwp_paragraph_set_ghwp_text(paragraph, ghwp_text);
 }
 
 void ghwp_parse_paragraph_char_shape (GHWPParagraph *paragraph,

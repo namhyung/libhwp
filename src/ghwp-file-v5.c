@@ -105,80 +105,6 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
     g_object_unref (context);
 }
 
-static gchar *_ghwp_file_get_text_from_context (GHWPContext *context)
-{
-    g_return_val_if_fail (context != NULL, NULL);
-    gunichar2 ch; /* guint16 */
-    GString  *text = g_string_new("");
-    guint     i;
-
-    for (i = 0; i < context->data_len; i = i + 2)
-    {
-        context_read_uint16 (context, &ch);
-        switch (ch) {
-        case 0:
-            break;
-        case 1:
-        case 2:
-        case 3:
-        case 4: /* inline */
-        case 5: /* inline */
-        case 6: /* inline */
-        case 7: /* inline */
-        case 8: /* inline */
-            i = i + 14;
-            context_skip(context, 14);;
-            break;
-        case 9: /* inline */ /* tab */
-            i = i + 14;
-            context_skip(context, 14);;
-            g_string_append_unichar(text, ch);
-            break;
-        case 10:
-            break;
-        case 11:
-        case 12:
-            i = i + 14;
-            context_skip(context, 14);;
-            break;
-        case 13:
-            break;
-        case 14:
-        case 15:
-        case 16:
-        case 17:
-        case 18:
-        case 19: /* inline */
-        case 20: /* inline */
-        case 21:
-        case 22:
-        case 23:
-            i = i + 14;
-            context_skip(context, 14);;
-            break;
-        case 24:
-        case 25:
-        case 26:
-        case 27:
-        case 28:
-        case 29:
-        case 30:
-        case 31:
-            break;
-        default:
-            g_string_append_unichar(text, ch);
-            break;
-        } /* switch */
-    } /* for */
-
-    if (context->data_count != context->data_len) {
-        g_string_free(text, TRUE);
-        return NULL;
-    }
-
-    return g_string_free(text, FALSE);
-}
-
 /* NOTE: LE 저장 방식이 아닌 점에 유의, 설계 실수 같음 */
 #define MAKE_CTRL_ID(a, b, c, d)      \
     (guint32)((((guint8)(a)) << 24) | \
@@ -211,8 +137,6 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         GHWPContext   *context;
         GHWPTable     *table = NULL;
         GHWPTableCell *cell = NULL;
-        GHWPText      *ghwp_text;
-        gchar         *text;
         GHWPListHeader lhdr;
 
         section_stream = g_array_index (file->section_streams,
@@ -262,17 +186,15 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
                 paragraph = curr_status->p;
 
-                if (context->tag_id == GHWP_TAG_PARA_TEXT) {
-                    text      = _ghwp_file_get_text_from_context (context);
-                    ghwp_text = ghwp_text_new (text);
-                    ghwp_paragraph_set_ghwp_text (paragraph, ghwp_text);
-                } else if (context->tag_id == GHWP_TAG_PARA_CHAR_SHAPE) {
+                if (context->tag_id == GHWP_TAG_PARA_TEXT)
+                    ghwp_parse_paragraph_text (paragraph, context);
+                else if (context->tag_id == GHWP_TAG_PARA_CHAR_SHAPE)
                     ghwp_parse_paragraph_char_shape (paragraph, context);
-                } else if (context->tag_id == GHWP_TAG_PARA_LINE_SEG) {
+                else if (context->tag_id == GHWP_TAG_PARA_LINE_SEG)
                     ghwp_parse_paragraph_line_seg (paragraph, context);
-                } else if (context->tag_id == GHWP_TAG_PARA_RANGE_TAG) {
+                else if (context->tag_id == GHWP_TAG_PARA_RANGE_TAG)
                     ghwp_parse_paragraph_range_tag (paragraph, context);
-                }
+
                 break;
 
             case GHWP_TAG_CTRL_HEADER:

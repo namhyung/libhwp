@@ -94,7 +94,7 @@ static void _ghwp_file_ml_parse_node(GHWPDocument    *doc,
                 tag_p_count++;
                 if (tag_p_count > 1) {
                     GHWPParagraph *paragraph = ghwp_paragraph_new ();
-                    GHWPText *ghwp_text = ghwp_text_new ("");
+                    GHWPText *ghwp_text = ghwp_text_new ();
                     ghwp_paragraph_set_ghwp_text (paragraph, ghwp_text);
                     g_array_append_val (doc->paragraphs, paragraph);
                 }

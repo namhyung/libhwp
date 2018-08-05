@@ -352,9 +352,8 @@ static gboolean _ghwp_file_v3_parse_paragraph (GHWPDocument *doc)
             g_warning ("special character: %04x", c);
         } /* if */
     } /* while */
-    gchar *tmp = g_string_free(string, FALSE);
-    GHWPText *ghwp_text = ghwp_text_new (tmp);
-    g_free (tmp);
+    GHWPText *ghwp_text = ghwp_text_new ();
+    ghwp_text->text = g_string_free(string, FALSE);
     ghwp_paragraph_set_ghwp_text (paragraph, ghwp_text);
 
     static gdouble y   = 0.0;

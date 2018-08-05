@@ -243,6 +243,8 @@ void           ghwp_paragraph_add_link          (GHWPParagraph *paragraph,
                                                  gint           line);
 void           ghwp_parse_paragraph_header      (GHWPParagraph *paragraph,
                                                  GHWPContext *ctx);
+void           ghwp_parse_paragraph_text        (GHWPParagraph *paragraph,
+                                                 GHWPContext *ctx);
 void           ghwp_parse_paragraph_char_shape  (GHWPParagraph *paragraph,
                                                  GHWPContext *ctx);
 void           ghwp_parse_paragraph_line_seg    (GHWPParagraph *paragraph,
@@ -259,6 +261,49 @@ void           ghwp_parse_paragraph_range_tag   (GHWPParagraph *paragraph,
 #define GHWP_IS_TEXT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GHWP_TYPE_TEXT))
 #define GHWP_TEXT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GHWP_TYPE_TEXT, GHWPTextClass))
 
+enum ghwp_control_char {
+    GHWP_CC_UNUSABLE         = 0,
+    GHWP_CC_RESERVED1        = 1,
+    GHWP_CC_SEC_COL_DEF      = 2,
+    GHWP_CC_FIELD_STAR       = 3,
+    GHWP_CC_FIELD_END        = 4,
+    GHWP_CC_RESERVED2        = 5,
+    GHWP_CC_RESERVED3        = 6,
+    GHWP_CC_RESERVED4        = 7,
+    GHWP_CC_TITLE_MARK       = 8,
+    GHWP_CC_TAB              = 9,
+    GHWP_CC_LINE_BREAK       = 10,
+    GHWP_CC_OBJECT           = 11,
+    GHWP_CC_RESERVED5        = 12,
+    GHWP_CC_PARA_BREAK       = 13,
+    GHWP_CC_RESERVED6        = 14,
+    GHWP_CC_HIDDEN_DESC      = 15,
+    GHWP_CC_HEADER_FOOTER    = 16,
+    GHWP_CC_FOOT_END_NOTE    = 17,
+    GHWP_CC_AUTO_NUM         = 18,
+    GHWP_CC_RESERVED7        = 19,
+    GHWP_CC_RESERVED8        = 20,
+    GHWP_CC_PAGE_CONTR       = 21,
+    GHWP_CC_BOOKMARK         = 22,
+    GHWP_CC_OVERLAY          = 23,
+    GHWP_CC_HYPHEN           = 24,
+    GHWP_CC_RESERVED9        = 25,
+    GHWP_CC_RESERVED10        = 26,
+    GHWP_CC_RESERVED11       = 27,
+    GHWP_CC_RESERVED12       = 28,
+    GHWP_CC_RESERVED13       = 29,
+    GHWP_CC_GROUP_SPACE      = 30,
+    GHWP_CC_FIXED_SPACE      = 31,
+
+    GHWP_NUM_CC,
+};
+
+enum ghwp_control_type {
+    GHWP_CC_TYPE_CHAR,
+    GHWP_CC_TYPE_INLINE,
+    GHWP_CC_TYPE_EXTENDED,
+};
+
 typedef struct _GHWPText        GHWPText;
 typedef struct _GHWPTextClass   GHWPTextClass;
 typedef struct _GHWPTextPrivate GHWPTextPrivate;
@@ -268,6 +313,8 @@ struct _GHWPText
     GObject          parent_instance;
     GHWPTextPrivate *priv;
     gchar           *text;
+    gunichar2       *buf;
+    gint             n_chars;
 };
 
 struct _GHWPTextClass
@@ -276,7 +323,7 @@ struct _GHWPTextClass
 };
 
 GType     ghwp_text_get_type (void) G_GNUC_CONST;
-GHWPText *ghwp_text_new      (const     gchar *text);
+GHWPText *ghwp_text_new      (void);
 GHWPText *ghwp_text_append   (GHWPText *ghwp_text, const gchar *text);
 
 /** GHWPTable ****************************************************************/
