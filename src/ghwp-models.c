@@ -267,9 +267,17 @@ void ghwp_parse_paragraph_text (GHWPParagraph *paragraph,
 
         if (ch < GHWP_NUM_CC) {
             if (ghwp_control_char_type[ch] != GHWP_CC_TYPE_CHAR) {
-                if (ch != ghwp_text->buf[i + 7])
+                struct ghwp_control *cc = (void *)&ghwp_text->buf[i];
+
+                dbg ("%*s char: "CTRL_ID_FMT"\n", ctx->level * 3, "",
+                     CTRL_ID_PRINT (cc->id));
+
+                if (cc->code1 != cc->code2) {
                     dbg ("%*s control char mismatch: pos %u (%d != %#hx)\n",
-                         ctx->level * 3, "", i, ch, ghwp_text->buf[i + 7]);
+                         ctx->level * 3, "", i, cc->code1, cc->code2);
+                }
+
+                i += 7;
                 continue;
             }
         }

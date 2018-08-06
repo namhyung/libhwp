@@ -306,9 +306,31 @@ enum ghwp_control_type {
 
 extern enum ghwp_control_type ghwp_control_char_type[GHWP_NUM_CC];
 
+#define MAKE_CTRL_ID(a, b, c, d)      \
+    (guint32)((((guint8)(a)) << 24) | \
+              (((guint8)(b)) << 16) | \
+              (((guint8)(c)) <<  8) | \
+              (((guint8)(d)) <<  0))
+
+#define CTRL_ID_FMT    "'%c%c%c%c'"
+
+#define CTRL_ID_PRINT(ctrl_id)                      \
+    (ctrl_id >> 24) & 0xff, (ctrl_id >> 16) & 0xff, \
+    (ctrl_id >>  8) & 0xff, (ctrl_id >>  0) & 0xff
+
 typedef struct _GHWPText        GHWPText;
 typedef struct _GHWPTextClass   GHWPTextClass;
 typedef struct _GHWPTextPrivate GHWPTextPrivate;
+
+struct ghwp_control {
+    gunichar2       code1;
+    guint32         id;
+    union {
+        gunichar2   data[4];
+        void       *control;
+    } u;
+    gunichar2       code2;
+} __attribute__((packed));
 
 struct _GHWPText
 {

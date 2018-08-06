@@ -105,13 +105,6 @@ static void _ghwp_file_v5_parse_doc_info (GHWPDocument *doc, GError **error)
     g_object_unref (context);
 }
 
-/* NOTE: LE 저장 방식이 아닌 점에 유의, 설계 실수 같음 */
-#define MAKE_CTRL_ID(a, b, c, d)      \
-    (guint32)((((guint8)(a)) << 24) | \
-              (((guint8)(b)) << 16) | \
-              (((guint8)(c)) <<  8) | \
-              (((guint8)(d)) <<  0))
-
 /* enum의 최대값은 ?? */
 typedef enum
 {
@@ -200,9 +193,8 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
             case GHWP_TAG_CTRL_HEADER:
                 context_read_uint32 (context, &ctrl_id);
 
-                dbg ("%*s ctrl: %c%c%c%c\n", context->level * 3, "",
-                     (ctrl_id >> 24) & 0xff, (ctrl_id >> 16) & 0xff,
-                     (ctrl_id >>  8) & 0xff, (ctrl_id >>  0) & 0xff);
+                dbg ("%*s ctrl: "CTRL_ID_FMT"\n", context->level * 3, "",
+                     CTRL_ID_PRINT (ctrl_id));
 
                 switch (ctrl_id) {
                 case CTRL_ID_TABLE:
