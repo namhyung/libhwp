@@ -150,8 +150,9 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         while (ghwp_context_pull(context, error)) {
             GHWPContextStatus *curr_status = &context->status[context->level];
 
-            dbg ("%*stag = %u (size: %u)\n", context->level*3, "",
-                 context->tag_id, context->data_len);
+            dbg ("%*stag = %u [%s] (size: %u)\n", context->level*3, "",
+                 context->tag_id, _ghwp_get_tag_name (context->tag_id),
+                 context->data_len);
 
             switch (context->tag_id) {
             case GHWP_TAG_PARA_HEADER:
