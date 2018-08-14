@@ -72,7 +72,7 @@ char *
 ghwp_page_get_selected_text    (GHWPPage          *page,
                                 GHWPSelectionStyle style,
                                 GHWPRectangle     *selection);
-GList *
+cairo_region_t *
 ghwp_page_get_selection_region (GHWPPage          *page,
                                 gdouble            scale,
                                 GHWPSelectionStyle style,
