@@ -147,6 +147,7 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
         GHWPTableCell *cell = NULL;
         GHWPGSO       *gso = NULL;
         GHWPListHeader lhdr;
+        struct ghwp_control *ctrl;
 
         section_stream = g_array_index (file->section_streams,
                                         GInputStream *,
@@ -213,6 +214,12 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                 dbg ("%*s ctrl: "CTRL_ID_FMT"\n", context->level * 3, "",
                      CTRL_ID_PRINT (ctrl_id));
 
+                ctrl = ghwp_paragraph_get_empty_control (curr_status->p);
+                if (ctrl == NULL || ctrl->id != ctrl_id) {
+                    g_warning ("invalid control found: "CTRL_ID_FMT,
+                               CTRL_ID_PRINT (ctrl_id));
+                }
+
                 switch (ctrl_id) {
                 case CTRL_ID_TABLE:
                     table = ghwp_table_new ();
@@ -221,19 +228,23 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
 
                     paragraph = curr_status->p;
                     ghwp_paragraph_set_table (paragraph, table);
+                    ctrl->u.control = table;
 
                     curr_status->s = STATE_CTRL_TABLE;
                     curr_status->p = table;
                     break;
                 case CTRL_ID_SEC_DEF:
                     ghwp_parse_section_def (section, context);
+                    ctrl->u.control = &section->def_info;
                     break;
                 case CTRL_ID_COL_DEF:
                     ghwp_parse_column_def (section, context);
+                    ctrl->u.control = &section->col_info;
                     break;
                 case CTRL_ID_GSO:  /* GenShapeObject? */
                     gso = ghwp_gso_new ();
                     ghwp_parse_common_object (&gso->object, context);
+                    ctrl->u.control = gso;
                     curr_status->s = STATE_GSO;
                     curr_status->p = gso;
                     break;

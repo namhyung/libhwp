@@ -133,6 +133,7 @@ static void ghwp_text_finalize (GObject *obj)
 {
     GHWPText *ghwp_text = GHWP_TEXT(obj);
     _g_free0 (ghwp_text->text);
+    g_array_free (ghwp_text->ctrls, TRUE);
     G_OBJECT_CLASS (ghwp_text_parent_class)->finalize (obj);
 }
 
@@ -144,6 +145,7 @@ static void ghwp_text_class_init (GHWPTextClass *klass)
 
 static void ghwp_text_init (GHWPText *ghwp_text)
 {
+    ghwp_text->ctrls = g_array_new (TRUE, TRUE, sizeof (struct ghwp_control *));
 }
 
 /** GHWPPicture *****************************************************************/
@@ -340,6 +342,23 @@ GHWPPicture *ghwp_paragraph_get_picture (GHWPParagraph *paragraph)
     return paragraph->picture;
 }
 
+struct ghwp_control *ghwp_paragraph_get_empty_control (GHWPParagraph *paragraph)
+{
+    gint i;
+    struct ghwp_control *ctrl;
+
+    g_return_val_if_fail (paragraph != NULL, NULL);
+    g_return_val_if_fail (paragraph->ghwp_text != NULL, NULL);
+
+    for (i = 0; i < paragraph->ghwp_text->ctrls->len; i++) {
+        ctrl = g_array_index (paragraph->ghwp_text->ctrls, struct ghwp_control *, i);
+
+        if (ctrl->u.control == NULL)
+            return ctrl;
+    }
+    return NULL;
+}
+
 void ghwp_parse_paragraph_header (GHWPParagraph *paragraph,
                                   GHWPContext *ctx)
 {
@@ -401,6 +420,8 @@ void ghwp_parse_paragraph_text (GHWPParagraph *paragraph,
                     dbg ("%*s control char mismatch: pos %u (%d != %#hx)\n",
                          ctx->level * 3, "", i, cc->code1, cc->code2);
                 }
+
+                g_array_append_val (ghwp_text->ctrls, cc);
 
                 i += 7;
                 continue;

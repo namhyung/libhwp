@@ -322,7 +322,7 @@ enum ghwp_control_char {
     GHWP_CC_OVERLAY          = 23,
     GHWP_CC_HYPHEN           = 24,
     GHWP_CC_RESERVED9        = 25,
-    GHWP_CC_RESERVED10        = 26,
+    GHWP_CC_RESERVED10       = 26,
     GHWP_CC_RESERVED11       = 27,
     GHWP_CC_RESERVED12       = 28,
     GHWP_CC_RESERVED13       = 29,
@@ -373,6 +373,7 @@ struct _GHWPText
     gchar           *text;
     gunichar2       *buf;
     gint             n_chars;
+    GArray          *ctrls;
 };
 
 struct _GHWPTextClass
@@ -383,6 +384,8 @@ struct _GHWPTextClass
 GType     ghwp_text_get_type (void) G_GNUC_CONST;
 GHWPText *ghwp_text_new      (void);
 GHWPText *ghwp_text_append   (GHWPText *ghwp_text, const gchar *text);
+
+struct ghwp_control *ghwp_paragraph_get_empty_control (GHWPParagraph *paragraph);
 
 /** GHWPPicture *****************************************************************/
 
