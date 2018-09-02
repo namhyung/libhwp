@@ -222,8 +222,8 @@ static void _ghwp_file_v5_parse_body_text (GHWPDocument *doc, GError **error)
                     paragraph = curr_status->p;
                     ghwp_paragraph_set_table (paragraph, table);
 
-                    curr_status->s = STATE_CTRL_TABLE;
                     curr_status->p = table;
+                    context->status[context->level + 1].s = STATE_CTRL_TABLE;
                     break;
                 case CTRL_ID_SEC_DEF:
                     ghwp_parse_section_def (section, context);
