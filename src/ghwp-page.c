@@ -312,17 +312,107 @@ static void draw_paragraph_texts (cairo_t       *cr,
     }
 }
 
+static guint get_cell_height (GHWPTableCell *cell)
+{
+    guint i, k;
+    guint cell_height;
+    GHWPParagraph *paragraph;
+    GHWPLineSeg   *line;
+
+    cell_height = cell->t_margin + cell->b_margin;
+
+    for (i = 0; i < cell->paragraphs->len; i++) {
+        paragraph = g_array_index (cell->paragraphs, GHWPParagraph *, i);
+
+        for (k = 0; k < paragraph->line_segs->len; k++) {
+            line = g_array_index (paragraph->line_segs, GHWPLineSeg *, k);
+            cell_height += line->line_height;
+        }
+    }
+
+    if (cell->height > cell_height)
+        cell_height = cell->height;
+
+    return cell_height;
+}
+
+static void draw_paragraph_table (cairo_t       *cr,
+                                  GHWPDocument  *document,
+                                  GHWPPageDef   *page_info,
+                                  GHWPParagraph *paragraph,
+                                  GHWPTable     *table)
+{
+    GHWPLineSeg   *line;
+    GHWPTableCell *cell;
+    ghwp_unit      x, y;
+    guint          i, k;
+
+    line = g_array_index (paragraph->line_segs, GHWPLineSeg *, 0);
+
+    x = page_info->l_margin;
+    y = page_info->t_margin + page_info->header + line->v_pos;
+
+    cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
+    cairo_set_line_width (cr, 0.3);
+    cairo_rectangle (cr, x / GHWP_UPP, y / GHWP_UPP, table->obj.width / GHWP_UPP,
+                     table->obj.height / GHWP_UPP);
+    cairo_stroke (cr);
+
+    guint cell_height = 0;
+
+    for (i = 0; i < table->cells->len; i++) {
+        cell = g_array_index (table->cells, GHWPTableCell *, i);
+
+        if (cell->col_addr == 0) {
+            x = page_info->l_margin;
+            y += cell_height;
+
+            /* calculate cell_height */
+            cell_height = get_cell_height(cell);
+
+            GHWPTableCell *next_cell;
+            guint next_cell_height;
+
+            for (k = i + 1; k < table->cells->len; k++) {
+                next_cell = g_array_index (table->cells, GHWPTableCell *, k);
+                if (cell->row_addr != next_cell->row_addr)
+                    break;
+
+                next_cell_height = get_cell_height(next_cell);
+                if (next_cell_height > cell_height)
+                    cell_height = next_cell_height;
+            }
+        }
+
+        cairo_set_line_width (cr, 0.2);
+        cairo_rectangle (cr, x / GHWP_UPP, y / GHWP_UPP,
+                         cell->width / GHWP_UPP, cell_height / GHWP_UPP);
+        cairo_stroke (cr);
+
+        for (k = 0; k < cell->paragraphs->len; k++) {
+            paragraph = g_array_index(cell->paragraphs,
+                                      GHWPParagraph *, k);
+            if (paragraph->ghwp_text) {
+                draw_paragraph_texts (cr, document, paragraph,
+                                      x + cell->l_margin,
+                                      y + line->line_height - cell->b_margin);
+            }
+        }
+
+        x += cell->width;
+    }
+}
+
 gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
 {
     g_return_val_if_fail (page != NULL, FALSE);
     g_return_val_if_fail (cr   != NULL, FALSE);
     cairo_save (cr);
 
-    guint          i, j, k;
+    guint          i;
     GHWPParagraph *paragraph;
     GHWPText      *ghwp_text;
     GHWPTable     *table;
-    GHWPTableCell *cell;
     GHWPPageDef   *page_info;
     GHWPLineSeg   *line;
     GHWPPicture   *pic;
@@ -349,48 +439,8 @@ gboolean ghwp_page_render (GHWPPage *page, cairo_t *cr)
         /* draw table */
         table = ghwp_paragraph_get_table (paragraph);
         if (table != NULL) {
-            line = g_array_index (paragraph->line_segs, GHWPLineSeg *, 0);
-
-            x = page_info->l_margin;
-            y = page_info->t_margin + page_info->header + line->v_pos;
-
-            cairo_set_source_rgb (cr, 0.0, 0.0, 0.0);
-            cairo_set_line_width (cr, 0.3);
-            cairo_rectangle (cr, x / GHWP_UPP, y / GHWP_UPP, table->obj.width / GHWP_UPP,
-                             table->obj.height / GHWP_UPP);
-            cairo_stroke (cr);
-
-            guint cell_width = 0;
-
-            for (j = 0; j < table->cells->len; j++) {
-                cell = g_array_index(table->cells, GHWPTableCell *, j);
-
-                if (cell->col_addr == 0) {
-                    x = page_info->l_margin;
-
-                    if (j != 0)  /* FIXME */
-                        y += table->obj.height / table->n_rows;
-                } else {
-                    x += cell_width;
-                }
-
-                cairo_set_line_width (cr, 0.2);
-                cairo_rectangle (cr, x / GHWP_UPP, y / GHWP_UPP, cell_width / GHWP_UPP,
-                                 (table->obj.height / table->n_rows) / GHWP_UPP);
-                cairo_stroke (cr);
-
-                for (k = 0; k < cell->paragraphs->len; k++) {
-                    paragraph = g_array_index(cell->paragraphs,
-                                              GHWPParagraph *, k);
-                    if (paragraph->ghwp_text) {
-                        draw_paragraph_texts (cr, page->section->document, paragraph,
-                                              x + cell->l_margin,
-                                              y + line->line_height - cell->b_margin);
-                    }
-                }
-
-                cell_width  = cell->width;
-            }
+            draw_paragraph_table (cr, page->section->document, page_info,
+                                  paragraph, table);
         }
 
         pic = ghwp_paragraph_get_picture (paragraph);
