@@ -393,9 +393,27 @@ static void draw_paragraph_table (cairo_t       *cr,
             paragraph = g_array_index(cell->paragraphs,
                                       GHWPParagraph *, k);
             if (paragraph->ghwp_text) {
+                ghwp_unit x_adjust, y_adjust;
+
+                x_adjust = cell->l_margin;
+                y_adjust = cell->t_margin;
+
+                line = g_array_index (paragraph->line_segs, GHWPLineSeg *, 0);
+
+                switch (cell->header.attr & LHDR_ATTR_VERT_ALIGN_MASK) {
+                case LHDR_ATTR_VERT_ALIGN_TOP:
+                    y_adjust += line->text_height;
+                    break;
+                case LHDR_ATTR_VERT_ALIGN_CENTER:
+                    y_adjust = (cell_height - line->text_height) / 2;
+                    break;
+                case LHDR_ATTR_VERT_ALIGN_BOTTOM:
+                    y_adjust = cell_height - cell->b_margin;
+                    break;
+                }
+
                 draw_paragraph_texts (cr, document, paragraph,
-                                      x + cell->l_margin,
-                                      y + line->line_height - cell->b_margin);
+                                      x + x_adjust, y + y_adjust);
             }
         }
 
